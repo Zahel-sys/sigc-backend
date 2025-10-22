@@ -1,6 +1,7 @@
 package com.sigc.backend.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 import lombok.*;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -16,10 +17,16 @@ public class Horario {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long idHorario;
 
+    @FutureOrPresent(message = "La fecha debe ser hoy o posterior")
     private LocalDate fecha;
-    private String turno; // Mañana, Tarde, Noche
+
+    @NotBlank(message = "El turno es obligatorio")
+    @Pattern(regexp = "^(Mañana|Tarde|Noche)$", message = "El turno debe ser Mañana, Tarde o Noche")
+    private String turno;
+
     private LocalTime horaInicio;
     private LocalTime horaFin;
+
     private boolean disponible = true;
 
     @ManyToOne
