@@ -2,10 +2,10 @@ package com.sigc.backend.controller;
 
 import com.sigc.backend.model.Horario;
 import com.sigc.backend.repository.HorarioRepository;
-import com.sigc.backend.repository.DoctorRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import jakarta.validation.Valid;
 import java.util.List;
 
@@ -17,51 +17,46 @@ public class HorarioController {
     @Autowired
     private HorarioRepository horarioRepository;
 
-    @Autowired
-    private DoctorRepository doctorRepository;
-
-    // 📋 Listar todos los horarios
+    // 🔹 Listar todos los horarios
     @GetMapping
     public List<Horario> listar() {
         return horarioRepository.findAll();
     }
 
-    // ➕ Crear un nuevo horario
+    // 🔹 Listar horarios por doctor (solo disponibles)
+    @GetMapping("/doctor/{idDoctor}")
+    public List<Horario> listarPorDoctor(@PathVariable Long idDoctor) {
+        return horarioRepository.findByDoctor_IdDoctorAndDisponibleTrue(idDoctor);
+    }
+
+    // 🔹 Crear nuevo horario
     @PostMapping
     public ResponseEntity<Horario> crear(@Valid @RequestBody Horario horario) {
-        // 🔹 Buscar el doctor por ID y asignarlo correctamente
-        if (horario.getDoctor() != null && horario.getDoctor().getIdDoctor() != null) {
-            var doctor = doctorRepository.findById(horario.getDoctor().getIdDoctor())
-                    .orElseThrow(() -> new RuntimeException("Doctor no encontrado"));
-            horario.setDoctor(doctor);
-        }
-
         return ResponseEntity.ok(horarioRepository.save(horario));
     }
 
-    // ✏️ Actualizar un horario existente
+    // 🔹 Actualizar horario existente
     @PutMapping("/{id}")
     public ResponseEntity<Horario> actualizar(@PathVariable Long id, @Valid @RequestBody Horario horario) {
-        Horario existente = horarioRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Horario no encontrado con id " + id));
-
+        Horario existente = horarioRepository.findById(id).orElseThrow();
         existente.setFecha(horario.getFecha());
         existente.setTurno(horario.getTurno());
         existente.setHoraInicio(horario.getHoraInicio());
         existente.setHoraFin(horario.getHoraFin());
         existente.setDisponible(horario.isDisponible());
-
-        // 🔹 Actualizar también el doctor asociado
-        if (horario.getDoctor() != null && horario.getDoctor().getIdDoctor() != null) {
-            var doctor = doctorRepository.findById(horario.getDoctor().getIdDoctor())
-                    .orElseThrow(() -> new RuntimeException("Doctor no encontrado"));
-            existente.setDoctor(doctor);
-        }
-
+        existente.setDoctor(horario.getDoctor());
         return ResponseEntity.ok(horarioRepository.save(existente));
     }
 
-    // 🗑️ Eliminar horario
+    // 🔹 Reservar horario (marcar como no disponible)
+    @PutMapping("/{id}/reservar")
+    public ResponseEntity<Horario> reservar(@PathVariable Long id) {
+        Horario horario = horarioRepository.findById(id).orElseThrow();
+        horario.setDisponible(false);
+        return ResponseEntity.ok(horarioRepository.save(horario));
+    }
+
+    // 🔹 Eliminar horario
     @DeleteMapping("/{id}")
     public void eliminar(@PathVariable Long id) {
         horarioRepository.deleteById(id);
