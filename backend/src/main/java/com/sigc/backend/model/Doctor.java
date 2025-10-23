@@ -24,4 +24,7 @@ public class Doctor {
     @Min(value = 1, message = "El cupo mínimo es 1")
     @Max(value = 20, message = "El cupo máximo es 20 pacientes")
     private int cupoPacientes;
+
+    // 🖼️ Nuevo campo para guardar la ruta o URL de la imagen del doctor
+    private String imagen;
 }
