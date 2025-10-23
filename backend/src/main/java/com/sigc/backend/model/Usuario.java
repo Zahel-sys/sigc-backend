@@ -18,18 +18,18 @@ public class Usuario {
     @NotBlank(message = "El nombre es obligatorio")
     private String nombre;
 
-    @Email(message = "El email debe tener un formato válido")
+    @Email(message = "Debe ingresar un correo válido")
     private String email;
 
-    @Size(min = 6, message = "La contraseña debe tener al menos 6 caracteres")
+    @NotBlank(message = "La contraseña es obligatoria")
     private String password;
 
-    @Pattern(regexp = "^[0-9]{8}$", message = "El DNI debe tener exactamente 8 dígitos")
+    @Pattern(regexp = "\\d{8}", message = "El DNI debe tener 8 dígitos")
     private String dni;
 
-    @Pattern(regexp = "^[0-9]{9}$", message = "El número de celular debe tener 9 dígitos")
+    @Pattern(regexp = "\\d{9}", message = "El teléfono debe tener 9 dígitos")
     private String telefono;
 
-    private String rol;
-    private boolean activo = true;
+    @NotBlank(message = "El rol es obligatorio")
+    private String rol = "CLIENTE"; // CLIENTE o ADMIN
 }
