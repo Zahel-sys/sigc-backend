@@ -18,19 +18,19 @@ public class Cita {
 
     private LocalDate fechaCita;
     private LocalTime horaCita;
-
-    @Enumerated(EnumType.STRING)
-    private EstadoCita estado = EstadoCita.PENDIENTE;
+    private String turno;
 
     @ManyToOne
-    @JoinColumn(name = "id_usuario")
+    @JoinColumn(name = "idUsuario")
     private Usuario usuario;
 
     @ManyToOne
-    @JoinColumn(name = "id_servicio")
-    private Servicio servicio;
+    @JoinColumn(name = "idDoctor")
+    private Doctor doctor;
 
-    public enum EstadoCita {
-        PENDIENTE, CONFIRMADA, CANCELADA, REALIZADA
-    }
+    @ManyToOne
+    @JoinColumn(name = "idHorario")
+    private Horario horario;
+
+    private String estado = "ACTIVA"; // ACTIVA | CANCELADA | COMPLETADA
 }
