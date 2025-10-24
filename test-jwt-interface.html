@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test JWT - Migración de Tokens</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        button.secondary {
+            background: #6c757d;
+        }
+        
+        button.secondary:hover {
+            background: #5a6268;
+        }
+        
+        button.danger {
+            background: #dc3545;
+        }
+        
+        button.danger:hover {
+            background: #c82333;
+        }
+        
+        button.success {
+            background: #28a745;
+        }
+        
+        button.success:hover {
+            background: #218838;
+        }
+        
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .info { color: #17a2b8; }
+        .warning { color: #ffc107; }
+        
+        .token-display {
+            background: #2d3748;
+            color: #68d391;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            word-break: break-all;
+            margin-top: 10px;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        
+        .status-badge.old {
+            background: #ffc107;
+            color: #000;
+        }
+        
+        .status-badge.new {
+            background: #28a745;
+            color: white;
+        }
+        
+        .status-badge.invalid {
+            background: #dc3545;
+            color: white;
+        }
+        
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Sistema de Migración de Tokens JWT</h1>
+        <p class="subtitle">Test de endpoints para validar y renovar tokens</p>
+
+        <!-- Sección 1: Login -->
+        <div class="section">
+            <h2>1️⃣ Login</h2>
+            <input type="email" id="email" placeholder="Email" value="testjwt@test.com">
+            <input type="password" id="password" placeholder="Password" value="12345678">
+            <button onclick="login()">Hacer Login</button>
+            <button class="secondary" onclick="clearStorage()">Limpiar localStorage</button>
+            <div id="loginResult" class="result" style="display:none"></div>
+        </div>
+
+        <!-- Sección 2: Estado del Token -->
+        <div class="section">
+            <h2>2️⃣ Estado del Token Actual</h2>
+            <button onclick="checkTokenInfo()">Verificar Token</button>
+            <button onclick="decodeToken()">Decodificar JWT</button>
+            <button onclick="validateToken()">Validar Token</button>
+            <div id="tokenInfoResult" class="result" style="display:none"></div>
+        </div>
+
+        <!-- Sección 3: Renovación -->
+        <div class="section">
+            <h2>3️⃣ Renovación de Token</h2>
+            <button class="success" onclick="refreshToken()">Renovar Token</button>
+            <button class="warning" onclick="autoMigrate()">Auto-Migrar Token Antiguo</button>
+            <div id="refreshResult" class="result" style="display:none"></div>
+        </div>
+
+        <!-- Sección 4: Test de Endpoints -->
+        <div class="section">
+            <h2>4️⃣ Test de Endpoints de Usuario</h2>
+            <button onclick="getUserById()">GET /usuarios/{id}</button>
+            <button onclick="getUserByEmail()">GET /usuarios/email/{email}</button>
+            <div id="userResult" class="result" style="display:none"></div>
+        </div>
+
+        <!-- Sección 5: LocalStorage -->
+        <div class="section">
+            <h2>5️⃣ Contenido de localStorage</h2>
+            <button onclick="showLocalStorage()">Ver localStorage</button>
+            <button class="danger" onclick="clearAndReload()">Limpiar y Recargar</button>
+            <div id="storageResult" class="result" style="display:none"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8080';
+
+        function parseJwt(token) {
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(
+                    atob(base64).split('').map(c => 
+                        '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+                    ).join('')
+                );
+                return JSON.parse(jsonPayload);
+            } catch (e) {
+                return null;
+            }
+        }
+
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const resultDiv = document.getElementById('loginResult');
+
+            try {
+                const response = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Guardar en localStorage
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('idUsuario', data.idUsuario);
+                    localStorage.setItem('nombre', data.nombre);
+                    localStorage.setItem('email', data.email);
+                    localStorage.setItem('dni', data.dni);
+                    localStorage.setItem('telefono', data.telefono);
+                    localStorage.setItem('rol', data.rol);
+
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ Login exitoso!</div>
+                        <div class="token-display">${JSON.stringify(data, null, 2)}</div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ Error: ${data.error || 'Login fallido'}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error de conexión: ${error.message}</div>`;
+            }
+
+            resultDiv.style.display = 'block';
+        }
+
+        async function checkTokenInfo() {
+            const token = localStorage.getItem('token');
+            const resultDiv = document.getElementById('tokenInfoResult');
+
+            if (!token) {
+                resultDiv.innerHTML = '<div class="warning">⚠️ No hay token en localStorage</div>';
+                resultDiv.style.display = 'block';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/auth/token-info`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                const data = await response.json();
+
+                let badge = '';
+                if (data.tokenType === 'old') {
+                    badge = '<span class="status-badge old">TOKEN ANTIGUO</span>';
+                } else if (data.tokenType === 'new') {
+                    badge = '<span class="status-badge new">TOKEN NUEVO</span>';
+                } else {
+                    badge = '<span class="status-badge invalid">INVÁLIDO</span>';
+                }
+
+                resultDiv.innerHTML = `
+                    <div class="info">ℹ️ Información del Token ${badge}</div>
+                    <div class="token-display">${JSON.stringify(data, null, 2)}</div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+
+            resultDiv.style.display = 'block';
+        }
+
+        function decodeToken() {
+            const token = localStorage.getItem('token');
+            const resultDiv = document.getElementById('tokenInfoResult');
+
+            if (!token) {
+                resultDiv.innerHTML = '<div class="warning">⚠️ No hay token en localStorage</div>';
+                resultDiv.style.display = 'block';
+                return;
+            }
+
+            const decoded = parseJwt(token);
+            
+            if (decoded) {
+                const isOld = isNaN(decoded.sub);
+                const badge = isOld 
+                    ? '<span class="status-badge old">TOKEN ANTIGUO (email en sub)</span>'
+                    : '<span class="status-badge new">TOKEN NUEVO (ID en sub)</span>';
+
+                resultDiv.innerHTML = `
+                    <div class="success">✅ Token decodificado ${badge}</div>
+                    <div class="token-display">${JSON.stringify(decoded, null, 2)}</div>
+                `;
+            } else {
+                resultDiv.innerHTML = '<div class="error">❌ No se pudo decodificar el token</div>';
+            }
+
+            resultDiv.style.display = 'block';
+        }
+
+        async function validateToken() {
+            const token = localStorage.getItem('token');
+            const resultDiv = document.getElementById('tokenInfoResult');
+
+            if (!token) {
+                resultDiv.innerHTML = '<div class="warning">⚠️ No hay token en localStorage</div>';
+                resultDiv.style.display = 'block';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/auth/validate-token`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token })
+                });
+
+                const data = await response.json();
+
+                const badge = data.isOldToken
+                    ? '<span class="status-badge old">TOKEN ANTIGUO</span>'
+                    : '<span class="status-badge new">TOKEN NUEVO</span>';
+
+                resultDiv.innerHTML = `
+                    <div class="${data.valid ? 'success' : 'error'}">
+                        ${data.valid ? '✅' : '❌'} ${data.message} ${data.valid ? badge : ''}
+                    </div>
+                    <div class="token-display">${JSON.stringify(data, null, 2)}</div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+
+            resultDiv.style.display = 'block';
+        }
+
+        async function refreshToken() {
+            const token = localStorage.getItem('token');
+            const resultDiv = document.getElementById('refreshResult');
+
+            if (!token) {
+                resultDiv.innerHTML = '<div class="warning">⚠️ No hay token en localStorage</div>';
+                resultDiv.style.display = 'block';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/auth/refresh-token`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Actualizar localStorage
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('idUsuario', data.idUsuario);
+                    localStorage.setItem('nombre', data.nombre);
+                    localStorage.setItem('email', data.email);
+                    localStorage.setItem('dni', data.dni);
+                    localStorage.setItem('telefono', data.telefono);
+                    localStorage.setItem('rol', data.rol);
+
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ Token renovado exitosamente!</div>
+                        <div class="token-display">${JSON.stringify(data, null, 2)}</div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ Error: ${data.error}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+
+            resultDiv.style.display = 'block';
+        }
+
+        async function autoMigrate() {
+            const resultDiv = document.getElementById('refreshResult');
+            resultDiv.innerHTML = '<div class="info">🔄 Verificando token...</div>';
+            resultDiv.style.display = 'block';
+
+            const token = localStorage.getItem('token');
+            
+            if (!token) {
+                resultDiv.innerHTML = '<div class="warning">⚠️ No hay token. Por favor haz login.</div>';
+                return;
+            }
+
+            try {
+                // Verificar tipo de token
+                const infoResponse = await fetch(`${API_URL}/auth/token-info`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                const infoData = await infoResponse.json();
+
+                if (infoData.tokenType === 'old') {
+                    resultDiv.innerHTML = '<div class="warning">🔄 Token antiguo detectado. Renovando...</div>';
+                    await refreshToken();
+                } else {
+                    resultDiv.innerHTML = '<div class="success">✅ El token ya está actualizado!</div>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        async function getUserById() {
+            const idUsuario = localStorage.getItem('idUsuario');
+            const resultDiv = document.getElementById('userResult');
+
+            if (!idUsuario) {
+                resultDiv.innerHTML = '<div class="warning">⚠️ No hay idUsuario en localStorage</div>';
+                resultDiv.style.display = 'block';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/usuarios/${idUsuario}`);
+                const data = await response.json();
+
+                resultDiv.innerHTML = `
+                    <div class="success">✅ GET /usuarios/${idUsuario}</div>
+                    <div class="token-display">${JSON.stringify(data, null, 2)}</div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+
+            resultDiv.style.display = 'block';
+        }
+
+        async function getUserByEmail() {
+            const email = localStorage.getItem('email');
+            const resultDiv = document.getElementById('userResult');
+
+            if (!email) {
+                resultDiv.innerHTML = '<div class="warning">⚠️ No hay email en localStorage</div>';
+                resultDiv.style.display = 'block';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/usuarios/email/${email}`);
+                const data = await response.json();
+
+                resultDiv.innerHTML = `
+                    <div class="success">✅ GET /usuarios/email/${email}</div>
+                    <div class="token-display">${JSON.stringify(data, null, 2)}</div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+
+            resultDiv.style.display = 'block';
+        }
+
+        function showLocalStorage() {
+            const resultDiv = document.getElementById('storageResult');
+            const storage = {};
+            
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                storage[key] = localStorage.getItem(key);
+            }
+
+            if (Object.keys(storage).length === 0) {
+                resultDiv.innerHTML = '<div class="warning">⚠️ localStorage está vacío</div>';
+            } else {
+                resultDiv.innerHTML = `
+                    <div class="info">ℹ️ Contenido de localStorage:</div>
+                    <div class="token-display">${JSON.stringify(storage, null, 2)}</div>
+                `;
+            }
+
+            resultDiv.style.display = 'block';
+        }
+
+        function clearStorage() {
+            localStorage.clear();
+            alert('✅ localStorage limpiado');
+            showLocalStorage();
+        }
+
+        function clearAndReload() {
+            if (confirm('¿Estás seguro? Esto limpiará todo y recargará la página.')) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+
+        // Verificar estado al cargar
+        window.onload = () => {
+            const token = localStorage.getItem('token');
+            if (token) {
+                console.log('✅ Token encontrado en localStorage');
+                decodeToken();
+            } else {
+                console.log('⚠️ No hay token en localStorage');
+            }
+        };
+    </script>
+</body>
+</html>

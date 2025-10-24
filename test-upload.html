@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Upload - SIGC Backend</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f8f9ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: #f0f0ff;
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .preview {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9ff;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .preview.show {
+            display: block;
+        }
+
+        .preview img {
+            max-width: 100%;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .result.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .result.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e7f3ff;
+            border-radius: 10px;
+            font-size: 13px;
+            color: #004085;
+        }
+
+        .info-item {
+            margin: 5px 0;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🖼️ Test Upload - SIGC Backend</h1>
+        <p class="subtitle">Prueba el endpoint POST /uploads</p>
+
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📁</div>
+            <p><strong>Arrastra una imagen aquí</strong></p>
+            <p style="color: #999; font-size: 14px; margin-top: 5px;">o haz clic para seleccionar</p>
+            <input type="file" id="fileInput" accept="image/jpeg,image/png,image/gif,image/webp">
+        </div>
+
+        <button class="btn" id="uploadBtn" disabled>Subir Imagen</button>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 10px; color: #666;">Subiendo...</p>
+        </div>
+
+        <div class="preview" id="preview">
+            <h3>Vista previa:</h3>
+            <img id="previewImage" src="" alt="Preview">
+            <div id="fileInfo"></div>
+        </div>
+
+        <div class="result" id="result"></div>
+
+        <div class="info">
+            <div class="info-item">📌 <strong>Endpoint:</strong> POST http://localhost:8080/uploads</div>
+            <div class="info-item">📏 <strong>Tamaño máximo:</strong> 5MB</div>
+            <div class="info-item">🎨 <strong>Formatos:</strong> JPG, JPEG, PNG, GIF, WEBP</div>
+            <div class="info-item">💾 <strong>Guardado en:</strong> src/main/resources/static/images/especialidades/</div>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const preview = document.getElementById('preview');
+        const previewImage = document.getElementById('previewImage');
+        const fileInfo = document.getElementById('fileInfo');
+        const result = document.getElementById('result');
+        const loading = document.getElementById('loading');
+
+        let selectedFile = null;
+
+        // Click en el área de subida
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // Selección de archivo
+        fileInput.addEventListener('change', (e) => {
+            handleFile(e.target.files[0]);
+        });
+
+        // Drag & Drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            handleFile(e.dataTransfer.files[0]);
+        });
+
+        function handleFile(file) {
+            if (!file) return;
+
+            selectedFile = file;
+
+            // Mostrar preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImage.src = e.target.result;
+                preview.classList.add('show');
+            };
+            reader.readAsDataURL(file);
+
+            // Mostrar info del archivo
+            fileInfo.innerHTML = `
+                <div><strong>Nombre:</strong> ${file.name}</div>
+                <div><strong>Tamaño:</strong> ${(file.size / 1024).toFixed(2)} KB</div>
+                <div><strong>Tipo:</strong> ${file.type}</div>
+            `;
+
+            // Habilitar botón
+            uploadBtn.disabled = false;
+
+            // Ocultar resultado anterior
+            result.style.display = 'none';
+        }
+
+        // Subir archivo
+        uploadBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            try {
+                // Mostrar loading
+                loading.classList.add('show');
+                uploadBtn.disabled = true;
+                result.style.display = 'none';
+
+                // Hacer petición
+                const response = await fetch('http://localhost:8080/uploads', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                // Ocultar loading
+                loading.classList.remove('show');
+
+                if (response.ok && data.success) {
+                    // Éxito
+                    result.className = 'result success';
+                    result.innerHTML = `
+                        <strong>✅ ¡Imagen subida exitosamente!</strong><br><br>
+                        <strong>URL:</strong> ${data.url}<br>
+                        <strong>Nombre:</strong> ${data.filename}<br>
+                        <strong>Tamaño:</strong> ${(data.size / 1024).toFixed(2)} KB<br><br>
+                        <a href="http://localhost:8080${data.url}" target="_blank" style="color: #155724; text-decoration: underline;">
+                            Ver imagen subida
+                        </a>
+                    `;
+                } else {
+                    // Error del servidor
+                    result.className = 'result error';
+                    result.innerHTML = `
+                        <strong>❌ Error al subir imagen</strong><br><br>
+                        ${data.error || 'Error desconocido'}
+                    `;
+                }
+
+                uploadBtn.disabled = false;
+
+            } catch (error) {
+                // Error de conexión
+                loading.classList.remove('show');
+                result.className = 'result error';
+                result.innerHTML = `
+                    <strong>❌ Error de conexión</strong><br><br>
+                    ${error.message}<br><br>
+                    <em>Asegúrate de que el backend esté ejecutándose en http://localhost:8080</em>
+                `;
+                uploadBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
