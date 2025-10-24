@@ -5,7 +5,12 @@ import com.sigc.backend.repository.DoctorRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import jakarta.validation.Valid;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 @RestController
@@ -16,39 +21,87 @@ public class DoctorController {
     @Autowired
     private DoctorRepository doctorRepository;
 
-    // 🧾 Listar doctores
+    private static final String UPLOAD_DIR = "src/main/resources/uploads/";
+
+    // ==========================
+    // LISTAR TODOS LOS DOCTORES
+    // ==========================
     @GetMapping
     public List<Doctor> listar() {
         return doctorRepository.findAll();
     }
 
-    // ➕ Crear nuevo doctor
+    // ==========================
+    // CREAR DOCTOR
+    // ==========================
     @PostMapping
-    public ResponseEntity<Doctor> crear(@Valid @RequestBody Doctor doctor) {
+    public ResponseEntity<Doctor> crear(
+            @RequestParam("nombre") String nombre,
+            @RequestParam("especialidad") String especialidad,
+            @RequestParam("cupoPacientes") int cupoPacientes,
+            @RequestParam(value = "imagen", required = false) MultipartFile imagen
+    ) throws IOException {
+
+        Doctor doctor = new Doctor();
+        doctor.setNombre(nombre);
+        doctor.setEspecialidad(especialidad);
+        doctor.setCupoPacientes(cupoPacientes);
+
+        // Guardar imagen si se envía
+        if (imagen != null && !imagen.isEmpty()) {
+            String fileName = System.currentTimeMillis() + "_" + imagen.getOriginalFilename();
+            Path path = Paths.get(UPLOAD_DIR + fileName);
+            Files.createDirectories(path.getParent());
+            imagen.transferTo(path.toFile());
+            doctor.setImagen("/uploads/" + fileName);
+        }
+
         return ResponseEntity.ok(doctorRepository.save(doctor));
     }
 
-    // ✏️ Actualizar doctor existente
+    // ==========================
+    // ACTUALIZAR DOCTOR
+    // ==========================
     @PutMapping("/{id}")
-    public ResponseEntity<Doctor> actualizar(@PathVariable Long id, @Valid @RequestBody Doctor doctor) {
-        Doctor existente = doctorRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Doctor no encontrado con id " + id));
+    public ResponseEntity<Doctor> actualizar(
+            @PathVariable Long id,
+            @RequestParam("nombre") String nombre,
+            @RequestParam("especialidad") String especialidad,
+            @RequestParam("cupoPacientes") int cupoPacientes,
+            @RequestParam(value = "imagen", required = false) MultipartFile imagen
+    ) throws IOException {
 
-        existente.setNombre(doctor.getNombre());
-        existente.setEspecialidad(doctor.getEspecialidad());
-        existente.setCupoPacientes(doctor.getCupoPacientes());
+        Doctor existente = doctorRepository.findById(id).orElseThrow();
 
-        // 🔹 Agregamos soporte para actualizar la imagen
-        if (doctor.getImagen() != null && !doctor.getImagen().isEmpty()) {
-            existente.setImagen(doctor.getImagen());
+        existente.setNombre(nombre);
+        existente.setEspecialidad(especialidad);
+        existente.setCupoPacientes(cupoPacientes);
+
+        // Si se sube una nueva imagen, reemplazar la anterior
+        if (imagen != null && !imagen.isEmpty()) {
+            String fileName = System.currentTimeMillis() + "_" + imagen.getOriginalFilename();
+            Path path = Paths.get(UPLOAD_DIR + fileName);
+            Files.createDirectories(path.getParent());
+            imagen.transferTo(path.toFile());
+            existente.setImagen("/uploads/" + fileName);
         }
 
         return ResponseEntity.ok(doctorRepository.save(existente));
     }
 
-    // 🗑️ Eliminar doctor
+    // ==========================
+    // ELIMINAR DOCTOR
+    // ==========================
     @DeleteMapping("/{id}")
     public void eliminar(@PathVariable Long id) {
         doctorRepository.deleteById(id);
+    }
+
+    // ==========================
+    // LISTAR POR ESPECIALIDAD
+    // ==========================
+    @GetMapping("/especialidad/{nombre}")
+    public List<Doctor> listarPorEspecialidad(@PathVariable String nombre) {
+        return doctorRepository.findByEspecialidad(nombre);
     }
 }
