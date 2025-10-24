@@ -5,6 +5,8 @@ import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Component;
 import java.security.Key;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 @Component
 public class JwtUtil {
@@ -16,9 +18,21 @@ public class JwtUtil {
         return Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
     }
 
-    public String generateToken(String username) {
+    /**
+     * Genera un token JWT con el ID del usuario como subject
+     * @param idUsuario ID numérico del usuario
+     * @param email Email del usuario
+     * @param rol Rol del usuario
+     * @return Token JWT
+     */
+    public String generateToken(Long idUsuario, String email, String rol) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("email", email);
+        claims.put("rol", rol);
+
         return Jwts.builder()
-                .setSubject(username)
+                .setClaims(claims)
+                .setSubject(String.valueOf(idUsuario)) // ID como subject
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
@@ -34,12 +48,54 @@ public class JwtUtil {
         }
     }
 
-    public String getUsernameFromToken(String token) {
+    /**
+     * Obtiene el ID del usuario desde el token (campo "sub")
+     * @param token Token JWT
+     * @return ID del usuario como Long
+     */
+    public Long getUserIdFromToken(String token) {
         Claims claims = Jwts.parserBuilder()
                 .setSigningKey(getSigningKey())
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
-        return claims.getSubject();
+        return Long.parseLong(claims.getSubject());
+    }
+
+    /**
+     * Obtiene el email del usuario desde el token
+     * @param token Token JWT
+     * @return Email del usuario
+     */
+    public String getEmailFromToken(String token) {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+        return claims.get("email", String.class);
+    }
+
+    /**
+     * Obtiene el rol del usuario desde el token
+     * @param token Token JWT
+     * @return Rol del usuario
+     */
+    public String getRolFromToken(String token) {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+        return claims.get("rol", String.class);
+    }
+
+    /**
+     * Método legacy para compatibilidad
+     * @deprecated Usar getUserIdFromToken en su lugar
+     */
+    @Deprecated
+    public String getUsernameFromToken(String token) {
+        return getEmailFromToken(token);
     }
 }

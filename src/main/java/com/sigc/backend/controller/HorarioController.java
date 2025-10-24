@@ -2,63 +2,118 @@ package com.sigc.backend.controller;
 
 import com.sigc.backend.model.Horario;
 import com.sigc.backend.repository.HorarioRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+import java.util.Collections;
 import java.util.List;
 
+@Slf4j
 @RestController
-@RequestMapping("/api/horarios")
-@CrossOrigin(origins = "*")
+@RequestMapping("/horarios")
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:5175"})
 public class HorarioController {
 
     @Autowired
     private HorarioRepository horarioRepository;
 
-    // 🔹 Listar todos los horarios
     @GetMapping
     public List<Horario> listar() {
-        return horarioRepository.findAll();
+        try {
+            log.info("Listando todos los horarios");
+            List<Horario> horarios = horarioRepository.findAll();
+            log.info("Se encontraron {} horarios", horarios.size());
+            return horarios;
+        } catch (Exception e) {
+            log.error("Error al listar horarios: {}", e.getMessage(), e);
+            return Collections.emptyList();
+        }
     }
 
-    // 🔹 Listar horarios por doctor (solo disponibles)
     @GetMapping("/doctor/{idDoctor}")
     public List<Horario> listarPorDoctor(@PathVariable Long idDoctor) {
-        return horarioRepository.findByDoctor_IdDoctorAndDisponibleTrue(idDoctor);
+        try {
+            log.info("Listando horarios disponibles del doctor ID: {}", idDoctor);
+            List<Horario> horarios = horarioRepository.findByDoctor_IdDoctorAndDisponibleTrue(idDoctor);
+            log.info("Doctor {} tiene {} horarios disponibles", idDoctor, horarios.size());
+            return horarios;
+        } catch (Exception e) {
+            log.error("Error al listar horarios del doctor {}: {}", idDoctor, e.getMessage(), e);
+            return Collections.emptyList();
+        }
     }
 
-    // 🔹 Crear nuevo horario
     @PostMapping
-    public ResponseEntity<Horario> crear(@Valid @RequestBody Horario horario) {
-        return ResponseEntity.ok(horarioRepository.save(horario));
+    public ResponseEntity<?> crear(@Valid @RequestBody Horario horario) {
+        try {
+            log.info("Creando nuevo horario para doctor ID: {}", horario.getDoctor().getIdDoctor());
+            Horario saved = horarioRepository.save(horario);
+            log.info("Horario creado exitosamente con ID: {}", saved.getIdHorario());
+            return ResponseEntity.ok(saved);
+        } catch (Exception e) {
+            log.error("Error al crear horario: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error al crear el horario");
+        }
     }
 
-    // 🔹 Actualizar horario existente
     @PutMapping("/{id}")
-    public ResponseEntity<Horario> actualizar(@PathVariable Long id, @Valid @RequestBody Horario horario) {
-        Horario existente = horarioRepository.findById(id).orElseThrow();
-        existente.setFecha(horario.getFecha());
-        existente.setTurno(horario.getTurno());
-        existente.setHoraInicio(horario.getHoraInicio());
-        existente.setHoraFin(horario.getHoraFin());
-        existente.setDisponible(horario.isDisponible());
-        existente.setDoctor(horario.getDoctor());
-        return ResponseEntity.ok(horarioRepository.save(existente));
+    public ResponseEntity<?> actualizar(@PathVariable Long id, @Valid @RequestBody Horario horario) {
+        try {
+            log.info("Actualizando horario ID: {}", id);
+            Horario existente = horarioRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Horario no encontrado con ID: " + id));
+            
+            existente.setFecha(horario.getFecha());
+            existente.setTurno(horario.getTurno());
+            existente.setHoraInicio(horario.getHoraInicio());
+            existente.setHoraFin(horario.getHoraFin());
+            existente.setDisponible(horario.isDisponible());
+            existente.setDoctor(horario.getDoctor());
+            
+            Horario actualizado = horarioRepository.save(existente);
+            log.info("Horario {} actualizado exitosamente", id);
+            return ResponseEntity.ok(actualizado);
+        } catch (Exception e) {
+            log.error("Error al actualizar horario {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error al actualizar el horario");
+        }
     }
 
-    // 🔹 Reservar horario (marcar como no disponible)
     @PutMapping("/{id}/reservar")
-    public ResponseEntity<Horario> reservar(@PathVariable Long id) {
-        Horario horario = horarioRepository.findById(id).orElseThrow();
-        horario.setDisponible(false);
-        return ResponseEntity.ok(horarioRepository.save(horario));
+    public ResponseEntity<?> reservar(@PathVariable Long id) {
+        try {
+            log.info("Reservando horario ID: {}", id);
+            Horario horario = horarioRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Horario no encontrado con ID: " + id));
+            
+            horario.setDisponible(false);
+            Horario reservado = horarioRepository.save(horario);
+            log.info("Horario {} reservado exitosamente", id);
+            return ResponseEntity.ok(reservado);
+        } catch (Exception e) {
+            log.error("Error al reservar horario {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error al reservar el horario");
+        }
     }
 
-    // 🔹 Eliminar horario
     @DeleteMapping("/{id}")
-    public void eliminar(@PathVariable Long id) {
-        horarioRepository.deleteById(id);
+    public ResponseEntity<?> eliminar(@PathVariable Long id) {
+        try {
+            log.info("Eliminando horario ID: {}", id);
+            horarioRepository.deleteById(id);
+            log.info("Horario {} eliminado exitosamente", id);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            log.error("Error al eliminar horario {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error al eliminar el horario");
+        }
     }
 }
