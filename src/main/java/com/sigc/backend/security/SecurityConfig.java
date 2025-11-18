@@ -19,25 +19,19 @@ import java.util.Arrays;
  * - Configura BCrypt para encriptación de contraseñas
  * - Desactiva CSRF (para API REST)
  * - Configura CORS para permitir peticiones del frontend
- * - Permite acceso sin autenticación a endpoints públicos
+ * - Permite acceso sin autenticación a endpoints públicos y archivos estáticos (imágenes)
  */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
-    /**
-     * Bean para encriptar contraseñas con BCrypt
-     * Fuerza: 10 rondas (balance entre seguridad y rendimiento)
-     */
+    // Encriptación con BCrypt
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    /**
-     * Configuración de CORS
-     * Permite peticiones desde el frontend en localhost:5173, 5174 y 5175
-     */
+    // CORS: Permitir peticiones del frontend en localhost (para desarrollo)
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
@@ -49,27 +43,21 @@ public class SecurityConfig {
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
-        configuration.setMaxAge(3600L); // Cache preflight por 1 hora
-        
+        configuration.setMaxAge(3600L);
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
 
-    /**
-     * Configuración de la cadena de filtros de seguridad
-     * - CSRF deshabilitado (API REST con JWT)
-     * - HTTP Basic Auth DESHABILITADO (usamos JWT Bearer Tokens)
-     * - Form Login DESHABILITADO (usamos JWT)
-     * - Sesiones STATELESS (sin estado - JWT puro)
-     */
+    // Cadena de filtros de seguridad
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .cors(Customizer.withDefaults()) // Habilita CORS con el bean definido arriba
-            .csrf(csrf -> csrf.disable()) // Desactiva CSRF (necesario para APIs REST)
-            .httpBasic(httpBasic -> httpBasic.disable()) // ⭐ CRÍTICO: Deshabilitar HTTP Basic Auth
-            .formLogin(form -> form.disable()) // ⭐ Deshabilitar form login
+            .cors(Customizer.withDefaults())
+            .csrf(csrf -> csrf.disable())
+            .httpBasic(httpBasic -> httpBasic.disable())
+            .formLogin(form -> form.disable())
             .authorizeHttpRequests(auth -> auth
                 // Endpoints públicos - sin autenticación
                 .requestMatchers("/auth/**").permitAll()
@@ -80,10 +68,10 @@ public class SecurityConfig {
                 .requestMatchers("/api/servicios/**", "/servicios/**").permitAll()
                 .requestMatchers("/api/usuarios/**", "/usuarios/**").permitAll()
                 .requestMatchers("/uploads/**").permitAll()
-                // Cualquier otra petición requiere autenticación
+                .requestMatchers("/images/**").permitAll() // ⭐️ PERMITIR ARCHIVOS ESTÁTICOS ⭐️
+                // Otras peticiones exigen autenticación
                 .anyRequest().authenticated()
             );
-
         return http.build();
     }
 }
