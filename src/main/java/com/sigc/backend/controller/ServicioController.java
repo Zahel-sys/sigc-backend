@@ -61,16 +61,16 @@ public class ServicioController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> actualizarServicio(@PathVariable Long id, @RequestBody Servicio servicio) {
+    public ResponseEntity<?> actualizarServicio(@PathVariable Long id, @RequestBody Servicio servicioDTO) {
         try {
             log.info("Actualizando servicio ID: {}", id);
             Servicio existente = servicioRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Servicio no encontrado con ID: " + id));
             
-            existente.setNombreServicio(servicio.getNombreServicio());
-            existente.setDescripcion(servicio.getDescripcion());
-            existente.setDuracionMinutos(servicio.getDuracionMinutos());
-            existente.setPrecio(servicio.getPrecio());
+            existente.setNombreServicio(servicioDTO.getNombreServicio());
+            existente.setDescripcion(servicioDTO.getDescripcion());
+            existente.setDuracionMinutos(servicioDTO.getDuracionMinutos());
+            existente.setPrecio(servicioDTO.getPrecio());
             
             Servicio actualizado = servicioRepository.save(existente);
             log.info("Servicio {} actualizado exitosamente", id);

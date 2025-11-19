@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import java.util.Collections;
@@ -48,7 +49,7 @@ public class EspecialidadController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> actualizar(@PathVariable Long id, @Valid @RequestBody Especialidad especialidad) {
+    public ResponseEntity<?> actualizar(@PathVariable @NonNull Long id, @Valid @RequestBody Especialidad especialidad) {
         try {
             log.info("Actualizando especialidad con ID: {}", id);
             Especialidad existente = especialidadRepository.findById(id)

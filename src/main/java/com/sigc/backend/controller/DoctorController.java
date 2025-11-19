@@ -78,15 +78,19 @@ public class DoctorController {
             Doctor existente = doctorRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Doctor no encontrado"));
 
-            existente.setNombre(nombre);
-            existente.setEspecialidad(especialidad);
-            existente.setCupoPacientes(cupoPacientes);
+            if (nombre != null) existente.setNombre(nombre);
+            if (especialidad != null) existente.setEspecialidad(especialidad);
+            if (cupoPacientes != null) existente.setCupoPacientes(cupoPacientes);
 
             if (imagen != null && !imagen.isEmpty()) {
-                existente.setImagen(guardarImagen(imagen));
+                String imagenGuardada = guardarImagen(imagen);
+                if (imagenGuardada != null) {
+                    existente.setImagen(imagenGuardada);
+                }
             }
 
-            return ResponseEntity.ok(doctorRepository.save(existente));
+            Doctor doctorGuardado = doctorRepository.save(existente);
+            return ResponseEntity.ok(doctorGuardado);
 
         } catch (Exception e) {
             log.error("Error al actualizar doctor: {}", e.getMessage());
@@ -110,8 +114,11 @@ public class DoctorController {
         if (file.getSize() > MAX_SIZE) throw new IOException("El archivo excede los 5MB permitidos.");
 
         String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null || originalFilename.trim().isEmpty()) {
+            throw new IOException("El nombre del archivo es inválido");
+        }
         String extension = "";
-        if (originalFilename != null && originalFilename.contains(".")) {
+        if (originalFilename.contains(".")) {
             extension = originalFilename.substring(originalFilename.lastIndexOf(".") + 1).toLowerCase();
         }
         if (!EXTENSIONES_PERMITIDAS.contains(extension)) {
@@ -140,12 +147,20 @@ public class DoctorController {
                 return ResponseEntity.notFound().build();
             }
             byte[] bytes = java.nio.file.Files.readAllBytes(imgFile.toPath());
-            MediaType mediaType;
-            if (filename.endsWith(".png")) mediaType = MediaType.IMAGE_PNG;
-            else if (filename.endsWith(".jpg") || filename.endsWith(".jpeg")) mediaType = MediaType.IMAGE_JPEG;
-            else if (filename.endsWith(".webp")) mediaType = MediaType.valueOf("image/webp");
-            else mediaType = MediaType.APPLICATION_OCTET_STREAM;
-            return ResponseEntity.ok().contentType(mediaType).body(bytes);
+            MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
+            if (filename != null) {
+                if (filename.endsWith(".png")) mediaType = MediaType.IMAGE_PNG;
+                else if (filename.endsWith(".jpg") || filename.endsWith(".jpeg")) mediaType = MediaType.IMAGE_JPEG;
+                else if (filename.endsWith(".webp")) {
+                    MediaType webpType = MediaType.valueOf("image/webp");
+                    if (webpType != null) mediaType = webpType;
+                }
+            }
+            if (mediaType != null) {
+                return ResponseEntity.ok().contentType(mediaType).body(bytes);
+            } else {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            }
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }

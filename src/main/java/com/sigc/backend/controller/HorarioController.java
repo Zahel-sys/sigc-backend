@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.lang.NonNull;
 import jakarta.validation.Valid;
 import java.util.Collections;
 import java.util.List;
@@ -62,18 +62,18 @@ public class HorarioController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> actualizar(@PathVariable Long id, @Valid @RequestBody Horario horario) {
+    public ResponseEntity<?> actualizar(@PathVariable @NonNull Long id, @Valid @RequestBody Horario horario) {
         try {
             log.info("Actualizando horario ID: {}", id);
             Horario existente = horarioRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Horario no encontrado con ID: " + id));
             
-            existente.setFecha(horario.getFecha());
-            existente.setTurno(horario.getTurno());
-            existente.setHoraInicio(horario.getHoraInicio());
-            existente.setHoraFin(horario.getHoraFin());
+            if (horario.getFecha() != null) existente.setFecha(horario.getFecha());
+            if (horario.getTurno() != null) existente.setTurno(horario.getTurno());
+            if (horario.getHoraInicio() != null) existente.setHoraInicio(horario.getHoraInicio());
+            if (horario.getHoraFin() != null) existente.setHoraFin(horario.getHoraFin());
             existente.setDisponible(horario.isDisponible());
-            existente.setDoctor(horario.getDoctor());
+            if (horario.getDoctor() != null) existente.setDoctor(horario.getDoctor());
             
             Horario actualizado = horarioRepository.save(existente);
             log.info("Horario {} actualizado exitosamente", id);
@@ -85,7 +85,7 @@ public class HorarioController {
         }
     }
 
-    @PutMapping("/{id}/reservar")
+    @PostMapping("/{id}/reservar")
     public ResponseEntity<?> reservar(@PathVariable Long id) {
         try {
             log.info("Reservando horario ID: {}", id);

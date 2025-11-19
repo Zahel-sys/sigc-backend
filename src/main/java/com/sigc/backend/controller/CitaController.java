@@ -72,8 +72,17 @@ public class CitaController {
                         .body("Debe proporcionar un horario válido");
             }
             
-            Long idUsuario = cita.getUsuario().getIdUsuario();
-            Long idHorario = cita.getHorario().getIdHorario();
+            Long idUsuario = cita.getUsuario() != null ? cita.getUsuario().getIdUsuario() : null;
+            Long idHorario = cita.getHorario() != null ? cita.getHorario().getIdHorario() : null;
+            
+            if (idUsuario == null) {
+                log.error("❌ Error: Usuario es nulo después de validación");
+                return ResponseEntity.badRequest().body("Usuario inválido");
+            }
+            if (idHorario == null) {
+                log.error("❌ Error: Horario es nulo después de validación");
+                return ResponseEntity.badRequest().body("Horario inválido");
+            }
             
             log.info("Creando cita para usuario ID: {} con horario ID: {}", idUsuario, idHorario);
             
@@ -135,6 +144,9 @@ public class CitaController {
     public ResponseEntity<String> cancelar(@PathVariable Long id) {
         try {
             log.info("Cancelando cita ID: {}", id);
+            if (id == null) {
+                return ResponseEntity.badRequest().body("ID inválido");
+            }
             Cita cita = citaRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
 
@@ -149,8 +161,11 @@ public class CitaController {
             }
 
             cita.setEstado("CANCELADA");
-            cita.getHorario().setDisponible(true);
-            horarioRepository.save(cita.getHorario());
+            Horario horarioAsociado = cita.getHorario();
+            if (horarioAsociado != null) {
+                horarioAsociado.setDisponible(true);
+                horarioRepository.save(horarioAsociado);
+            }
             citaRepository.save(cita);
 
             log.info("Cita {} cancelada correctamente", id);
@@ -166,9 +181,13 @@ public class CitaController {
     public ResponseEntity<?> eliminar(@PathVariable Long id) {
         try {
             log.info("Eliminando cita ID: {}", id);
-            citaRepository.deleteById(id);
-            log.info("Cita {} eliminada exitosamente", id);
-            return ResponseEntity.ok().build();
+            if (id != null) {
+                citaRepository.deleteById(id);
+                log.info("Cita {} eliminada exitosamente", id);
+                return ResponseEntity.ok().build();
+            } else {
+                return ResponseEntity.badRequest().body("ID inválido");
+            }
         } catch (Exception e) {
             log.error("Error al eliminar cita {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
