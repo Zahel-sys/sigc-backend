@@ -6,6 +6,7 @@ import com.sigc.backend.model.Usuario;
 import com.sigc.backend.repository.CitaRepository;
 import com.sigc.backend.repository.HorarioRepository;
 import com.sigc.backend.repository.UsuarioRepository;
+import com.sigc.backend.security.JwtUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -13,8 +14,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 @Slf4j
 @RestController
@@ -25,6 +30,7 @@ public class CitaController {
     @Autowired private CitaRepository citaRepository;
     @Autowired private HorarioRepository horarioRepository;
     @Autowired private UsuarioRepository usuarioRepository;
+    @Autowired private JwtUtil jwtUtil;
 
     @GetMapping
     public List<Cita> listar() {
@@ -52,92 +58,166 @@ public class CitaController {
         }
     }
 
+    /**
+     * Endpoint POST para crear/reservar citas médicas
+     * 
+     * Headers requeridos:
+     *   Authorization: Bearer {token_jwt}
+     * 
+     * Body:
+     * {
+     *   "usuario": { "idUsuario": 1 },
+     *   "horario": { "idHorario": 1 }
+     * }
+     * 
+     * O alternativamente:
+     * {
+     *   "paciente": { "idUsuario": 1 },
+     *   "horario": { "idHorario": 1 }
+     * }
+     */
     @PostMapping
-    public ResponseEntity<?> crear(@RequestBody Cita cita) {
+    public ResponseEntity<?> crear(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody Cita cita) {
         try {
             log.info("📝 Recibiendo petición para crear nueva cita");
             log.info("Datos recibidos: {}", cita);
             
-            // Validar que se envió el usuario/paciente
+            // ✅ VALIDACION 1: Verificar autenticación (token JWT)
+            if (authHeader == null || authHeader.isEmpty()) {
+                log.warn("⚠️ Falta header Authorization");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(crearError("Token JWT requerido en header Authorization"));
+            }
+            
+            String token = authHeader.startsWith("Bearer ") 
+                    ? authHeader.substring(7) 
+                    : authHeader;
+            
+            if (!jwtUtil.validateToken(token)) {
+                log.warn("❌ Token JWT inválido o expirado");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(crearError("Token JWT inválido o expirado"));
+            }
+            
+            // ✅ VALIDACION 2: Verificar que se proporcionó idPaciente
             if (cita.getUsuario() == null || cita.getUsuario().getIdUsuario() == null) {
-                log.error("❌ Error: No se proporcionó usuario/paciente en la petición");
-                return ResponseEntity.badRequest()
-                        .body("Debe proporcionar un usuario/paciente válido");
+                log.error("❌ Error: No se proporcionó idPaciente en la petición");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(crearError("Debe proporcionar idPaciente"));
             }
             
-            // Validar que se envió el horario
+            // ✅ VALIDACION 3: Verificar que se proporcionó idHorario
             if (cita.getHorario() == null || cita.getHorario().getIdHorario() == null) {
-                log.error("❌ Error: No se proporcionó horario en la petición");
-                return ResponseEntity.badRequest()
-                        .body("Debe proporcionar un horario válido");
+                log.error("❌ Error: No se proporcionó idHorario en la petición");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(crearError("Debe proporcionar idHorario"));
             }
             
-            Long idUsuario = cita.getUsuario() != null ? cita.getUsuario().getIdUsuario() : null;
-            Long idHorario = cita.getHorario() != null ? cita.getHorario().getIdHorario() : null;
+            Long idPaciente = cita.getUsuario().getIdUsuario();
+            Long idHorario = cita.getHorario().getIdHorario();
             
-            if (idUsuario == null) {
-                log.error("❌ Error: Usuario es nulo después de validación");
-                return ResponseEntity.badRequest().body("Usuario inválido");
-            }
-            if (idHorario == null) {
-                log.error("❌ Error: Horario es nulo después de validación");
-                return ResponseEntity.badRequest().body("Horario inválido");
-            }
-            
-            log.info("Creando cita para usuario ID: {} con horario ID: {}", idUsuario, idHorario);
-            
-            // Buscar usuario
-            Usuario usuario = usuarioRepository.findById(idUsuario)
+            // ✅ VALIDACION 4: Verificar que el paciente existe
+            Usuario usuario = usuarioRepository.findById(idPaciente)
                     .orElseThrow(() -> {
-                        log.error("❌ Usuario no encontrado con ID: {}", idUsuario);
-                        return new RuntimeException("Usuario no encontrado con ID: " + idUsuario);
+                        log.error("❌ Paciente no encontrado con ID: {}", idPaciente);
+                        return new RuntimeException("PACIENTE_NO_ENCONTRADO");
                     });
+            log.info("✓ Paciente validado: {} (ID: {})", usuario.getNombre(), idPaciente);
             
-            // Buscar horario
+            // ✅ VALIDACION 5: Verificar que el horario existe
             Horario horario = horarioRepository.findById(idHorario)
                     .orElseThrow(() -> {
                         log.error("❌ Horario no encontrado con ID: {}", idHorario);
-                        return new RuntimeException("Horario no encontrado con ID: " + idHorario);
+                        throw new RuntimeException("HORARIO_NO_ENCONTRADO");
                     });
-
-            // Validar que el horario esté disponible
+            log.info("✓ Horario validado: ID {}", idHorario);
+            
+            // ✅ VALIDACION 6: Verificar que el horario esté disponible
             if (!horario.isDisponible()) {
-                log.warn("⚠️ Horario {} ya no está disponible", horario.getIdHorario());
+                log.warn("⚠️ Horario {} ya no está disponible", idHorario);
                 return ResponseEntity.status(HttpStatus.CONFLICT)
-                        .body("El horario seleccionado ya no está disponible");
+                        .body(crearError("El horario ya no está disponible"));
             }
-
-            // Asignar datos a la cita
+            log.info("✓ Horario disponible: SÍ");
+            
+            // ✅ VALIDACION 7: Verificar que no exista ya una cita para ese horario
+            List<Cita> citasExistentes = citaRepository.findByHorario_IdHorario(idHorario);
+            if (!citasExistentes.isEmpty()) {
+                log.warn("⚠️ Ya existe una cita para el horario {}", idHorario);
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(crearError("Ya existe una cita para este horario"));
+            }
+            log.info("✓ No hay citas duplicadas para este horario");
+            
+            // ✅ VALIDACION 8: Verificar que el horario no esté en el pasado
+            LocalDateTime ahora = LocalDateTime.now();
+            LocalDateTime horarioDateTime = LocalDateTime.of(horario.getFecha(), horario.getHoraInicio());
+            
+            if (horarioDateTime.isBefore(ahora)) {
+                log.warn("⚠️ Intento de reservar horario en el pasado: {}", horarioDateTime);
+                return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                        .body(crearError("No se puede reservar un horario en el pasado"));
+            }
+            log.info("✓ Horario no está en el pasado");
+            
+            // ✅ Crear la cita con todas las validaciones pasadas
             cita.setUsuario(usuario);
             cita.setHorario(horario);
             cita.setDoctor(horario.getDoctor());
             cita.setFechaCita(horario.getFecha());
             cita.setHoraCita(horario.getHoraInicio());
             cita.setTurno(horario.getTurno());
-            cita.setEstado("ACTIVA");
-
-            // Marcar horario como no disponible
+            cita.setEstado("confirmada");
+            
+            // Guardar la fecha de reserva (fechaReserva)
+            // Esto se puede agregar al modelo si es necesario
+            
+            // Cambiar estado del horario a no disponible
             horario.setDisponible(false);
             horarioRepository.save(horario);
-
-            // Guardar cita
+            log.info("✓ Horario {} marcado como no disponible", idHorario);
+            
+            // Guardar la cita
             Cita saved = citaRepository.save(cita);
             log.info("✅ Cita creada exitosamente con ID: {}", saved.getIdCita());
             log.info("   - Paciente: {} (ID: {})", usuario.getNombre(), usuario.getIdUsuario());
             log.info("   - Doctor: {} (ID: {})", horario.getDoctor().getNombre(), horario.getDoctor().getIdDoctor());
             log.info("   - Fecha: {} Hora: {}", saved.getFechaCita(), saved.getHoraCita());
+            log.info("   - Estado: confirmada");
             
             return ResponseEntity.status(HttpStatus.CREATED).body(saved);
             
         } catch (RuntimeException e) {
-            log.error("❌ Error de validación al crear cita: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Error: " + e.getMessage());
+            String mensaje = e.getMessage();
+            
+            if (mensaje.equals("PACIENTE_NO_ENCONTRADO")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(crearError("Paciente no encontrado"));
+            } else if (mensaje.equals("HORARIO_NO_ENCONTRADO")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(crearError("Horario no encontrado"));
+            } else {
+                log.error("❌ Error de validación al crear cita: {}", e.getMessage());
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(crearError("Error: " + e.getMessage()));
+            }
         } catch (Exception e) {
             log.error("❌ Error inesperado al crear cita: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error interno al crear la cita: " + e.getMessage());
+                    .body(crearError("Error interno al crear la cita"));
         }
+    }
+    
+    /**
+     * Método auxiliar para crear respuestas de error estándar
+     */
+    private Map<String, Object> crearError(String mensaje) {
+        Map<String, Object> error = new HashMap<>();
+        error.put("error", mensaje);
+        error.put("timestamp", LocalDateTime.now());
+        return error;
     }
 
     @PutMapping("/{id}/cancelar")

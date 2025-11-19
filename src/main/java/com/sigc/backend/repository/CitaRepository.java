@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface CitaRepository extends JpaRepository<Cita, Long> {
     List<Cita> findByUsuario_IdUsuario(Long idUsuario);
+    List<Cita> findByHorario_IdHorario(Long idHorario);
 }
