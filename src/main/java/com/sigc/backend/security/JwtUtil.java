@@ -98,4 +98,13 @@ public class JwtUtil {
     public String getUsernameFromToken(String token) {
         return getEmailFromToken(token);
     }
+
+    /**
+     * Alias para obtener el ID del usuario desde el token
+     * @param token Token JWT
+     * @return ID del usuario como Long
+     */
+    public Long getIdUsuarioFromToken(String token) {
+        return getUserIdFromToken(token);
+    }
 }
