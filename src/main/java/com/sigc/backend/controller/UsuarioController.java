@@ -1,10 +1,10 @@
 package com.sigc.backend.controller;
 
-import com.sigc.backend.model.Usuario;
-import com.sigc.backend.repository.UsuarioRepository;
+import com.sigc.backend.domain.model.Usuario;
 import com.sigc.backend.dto.CambiarPasswordRequest;
 import com.sigc.backend.dto.CambiarPasswordResponse;
 import com.sigc.backend.security.JwtUtil;
+import com.sigc.backend.application.service.UserApplicationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -24,7 +24,7 @@ import java.util.Map;
 public class UsuarioController {
 
     @Autowired
-    private UsuarioRepository usuarioRepository;
+    private UserApplicationService userApplicationService;
 
     @Autowired
     private JwtUtil jwtUtil;
@@ -36,7 +36,7 @@ public class UsuarioController {
     public List<Usuario> listarUsuarios() {
         try {
             log.info("Listando todos los usuarios");
-            List<Usuario> usuarios = usuarioRepository.findAll();
+            List<Usuario> usuarios = userApplicationService.listAllUsers();
             log.info("Se encontraron {} usuarios", usuarios.size());
             return usuarios;
         } catch (Exception e) {
@@ -49,8 +49,8 @@ public class UsuarioController {
     public ResponseEntity<?> crearUsuario(@RequestBody Usuario usuario) {
         try {
             log.info("Creando nuevo usuario: {}", usuario.getEmail());
-            Usuario saved = usuarioRepository.save(usuario);
-            log.info("Usuario creado exitosamente con ID: {}", saved.getIdUsuario());
+            Usuario saved = userApplicationService.createUser(usuario);
+            log.info("Usuario creado exitosamente con ID: {}", saved.getId());
             return ResponseEntity.ok(saved);
         } catch (Exception e) {
             log.error("Error al crear usuario: {}", e.getMessage(), e);
@@ -69,22 +69,18 @@ public class UsuarioController {
     public ResponseEntity<?> obtenerUsuario(@PathVariable String idOrEmail) {
         try {
             log.info("Obteniendo usuario: {}", idOrEmail);
-            
-            Usuario usuario = null;
-            
-            // Intentar primero como ID (número)
+            com.sigc.backend.domain.model.Usuario usuario = null;
             try {
                 Long id = Long.parseLong(idOrEmail);
                 log.info("Buscando usuario por ID: {}", id);
-                usuario = usuarioRepository.findById(id).orElse(null);
+                usuario = userApplicationService.getUserById(id);
             } catch (NumberFormatException e) {
-                // No es un número, buscar por email
                 log.info("Buscando usuario por email: {}", idOrEmail);
-                usuario = usuarioRepository.findByEmail(idOrEmail);
+                usuario = userApplicationService.getUserByEmail(idOrEmail);
             }
-            
+
             if (usuario != null) {
-                log.info("Usuario encontrado: ID={}, Email={}", usuario.getIdUsuario(), usuario.getEmail());
+                log.info("Usuario encontrado: ID={}, Email={}", usuario.getId(), usuario.getEmail());
                 return ResponseEntity.ok(usuario);
             } else {
                 log.warn("Usuario no encontrado: {}", idOrEmail);
@@ -107,9 +103,9 @@ public class UsuarioController {
     public ResponseEntity<?> obtenerUsuarioPorEmail(@PathVariable String email) {
         try {
             log.info("Obteniendo usuario por email: {}", email);
-            Usuario usuario = usuarioRepository.findByEmail(email);
+            com.sigc.backend.domain.model.Usuario usuario = userApplicationService.getUserByEmail(email);
             if (usuario != null) {
-                log.info("Usuario encontrado: {}", usuario.getIdUsuario());
+                log.info("Usuario encontrado: {}", usuario.getId());
                 return ResponseEntity.ok(usuario);
             } else {
                 log.warn("Usuario no encontrado con email: {}", email);
@@ -127,15 +123,7 @@ public class UsuarioController {
     public ResponseEntity<?> actualizarUsuario(@PathVariable Long id, @RequestBody Usuario usuario) {
         try {
             log.info("Actualizando usuario ID: {}", id);
-            Usuario existente = usuarioRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + id));
-            
-            existente.setNombre(usuario.getNombre());
-            existente.setEmail(usuario.getEmail());
-            existente.setRol(usuario.getRol());
-            existente.setActivo(usuario.isActivo());
-            
-            Usuario actualizado = usuarioRepository.save(existente);
+            Usuario actualizado = userApplicationService.updateUser(id, usuario);
             log.info("Usuario {} actualizado exitosamente", id);
             return ResponseEntity.ok(actualizado);
         } catch (Exception e) {
@@ -149,7 +137,7 @@ public class UsuarioController {
     public ResponseEntity<?> eliminarUsuario(@PathVariable Long id) {
         try {
             log.info("Eliminando usuario ID: {}", id);
-            usuarioRepository.deleteById(id);
+            userApplicationService.deleteUser(id);
             log.info("Usuario {} eliminado exitosamente", id);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
@@ -206,11 +194,11 @@ public class UsuarioController {
             log.info("✓ Usuario autenticado: ID {}", idUsuario);
 
             // ✅ VALIDACION 2: Obtener usuario
-            Usuario usuario = usuarioRepository.findById(idUsuario)
-                    .orElseThrow(() -> {
-                        log.error("❌ Usuario no encontrado con ID: {}", idUsuario);
-                        throw new RuntimeException("USUARIO_NO_ENCONTRADO");
-                    });
+            Usuario usuario = userApplicationService.getUserById(idUsuario);
+            if (usuario == null) {
+                log.error("❌ Usuario no encontrado con ID: {}", idUsuario);
+                throw new RuntimeException("USUARIO_NO_ENCONTRADO");
+            }
             log.info("✓ Usuario encontrado: {}", usuario.getEmail());
 
             // ✅ VALIDACION 3: Validar que passwordActual, passwordNueva y passwordConfirmar no sean nulos
@@ -267,11 +255,11 @@ public class UsuarioController {
             // ✅ VALIDACION 8: Encriptar la nueva contraseña y guardar
             String passwordEncriptada = passwordEncoder.encode(request.getPasswordNueva());
             usuario.setPassword(passwordEncriptada);
-            usuarioRepository.save(usuario);
+            userApplicationService.createUser(usuario);
             log.info("✅ Contraseña actualizada exitosamente para usuario {}", idUsuario);
 
             // Retornar respuesta exitosa SIN la contraseña
-            return ResponseEntity.ok(CambiarPasswordResponse.exitoso(usuario.getIdUsuario(), usuario.getEmail()));
+            return ResponseEntity.ok(CambiarPasswordResponse.exitoso(usuario.getId(), usuario.getEmail()));
 
         } catch (RuntimeException e) {
             String mensaje = e.getMessage();

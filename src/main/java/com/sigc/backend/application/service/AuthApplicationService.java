@@ -9,6 +9,7 @@ import com.sigc.backend.domain.service.usecase.auth.LoginUseCase;
 import com.sigc.backend.domain.service.usecase.auth.RegisterUseCase;
 import com.sigc.backend.infrastructure.security.jwt.ITokenProvider;
 import com.sigc.backend.infrastructure.security.password.IPasswordEncoder;
+import org.springframework.stereotype.Service;
 
 /**
  * Application Service: Autenticación
@@ -25,6 +26,7 @@ import com.sigc.backend.infrastructure.security.password.IPasswordEncoder;
  * - DIP: Depende de interfaces/puertos
  * - MVC: Separa lógica de negocio (domain) de HTTP (controller)
  */
+@Service
 public class AuthApplicationService {
     
     private final IUsuarioRepository usuarioRepository;

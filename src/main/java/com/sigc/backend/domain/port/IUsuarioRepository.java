@@ -55,4 +55,18 @@ public interface IUsuarioRepository {
      * @return Total de usuarios
      */
     long count();
+
+    /**
+     * Obtiene todos los usuarios.
+     *
+     * @return Lista de usuarios
+     */
+    java.util.List<Usuario> findAll();
+
+    /**
+     * Elimina un usuario por su ID.
+     *
+     * @param id ID del usuario a eliminar
+     */
+    void deleteById(Long id);
 }

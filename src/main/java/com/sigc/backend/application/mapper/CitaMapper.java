@@ -66,6 +66,43 @@ public class CitaMapper {
             cita.getUpdatedAt()
         );
     }
+
+    /**
+     * Convierte una entidad JPA `com.sigc.backend.model.Cita` a `CitaDTO`.
+     * Esto evita exponer la entidad JPA directamente desde los controladores.
+     */
+    public static CitaDTO toDTOFromEntity(com.sigc.backend.model.Cita entity) {
+        if (entity == null) return null;
+        Long usuarioId = null;
+        if (entity.getUsuario() != null) {
+            try { usuarioId = entity.getUsuario().getIdUsuario(); } catch (Exception ignored) {}
+        }
+        Long doctorId = null;
+        if (entity.getDoctor() != null) {
+            try { doctorId = entity.getDoctor().getIdDoctor(); } catch (Exception ignored) {}
+        }
+        java.time.LocalDateTime fecha = null;
+        if (entity.getFechaCita() != null) {
+            if (entity.getHoraCita() != null) {
+                fecha = java.time.LocalDateTime.of(entity.getFechaCita(), entity.getHoraCita());
+            } else {
+                fecha = entity.getFechaCita().atStartOfDay();
+            }
+        }
+        String estado = entity.getEstado();
+
+        return new CitaDTO(
+            entity.getIdCita(),
+            usuarioId,
+            doctorId,
+            fecha,
+            null, // descripcion no disponible en la entidad JPA
+            estado,
+            null, // observaciones no mapeadas
+            null, // createdAt no disponible
+            null  // updatedAt no disponible
+        );
+    }
     
     /**
      * DTO simple de cita.

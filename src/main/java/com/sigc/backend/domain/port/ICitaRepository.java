@@ -57,4 +57,11 @@ public interface ICitaRepository {
      * @return Total de citas
      */
     long count();
+
+    /**
+     * Obtiene todas las citas.
+     *
+     * @return Lista de todas las citas
+     */
+    java.util.List<Cita> findAll();
 }

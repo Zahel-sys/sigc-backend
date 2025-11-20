@@ -3,8 +3,8 @@ package com.sigc.backend.service;
 import com.sigc.backend.dto.RegistroRequest;
 import com.sigc.backend.dto.RegistroResponse;
 import com.sigc.backend.exception.EmailDuplicadoException;
-import com.sigc.backend.model.Usuario;
-import com.sigc.backend.repository.UsuarioRepository;
+import com.sigc.backend.domain.model.Usuario;
+import com.sigc.backend.domain.port.IUsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -20,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class UsuarioService {
 
-    private final UsuarioRepository usuarioRepository;
+    private final IUsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
 
     /**
@@ -35,28 +35,27 @@ public class UsuarioService {
         log.info("Iniciando registro de usuario con email: {}", request.getEmail());
         
         // Validar que el email no exista
-        if (usuarioRepository.findByEmail(request.getEmail()) != null) {
+        if (usuarioRepository.findByEmail(request.getEmail()).isPresent()) {
             log.warn("Intento de registro con email duplicado: {}", request.getEmail());
             throw new EmailDuplicadoException("El email " + request.getEmail() + " ya está registrado");
         }
-
-        // Crear entidad Usuario
+        // Crear entidad de dominio Usuario
         Usuario usuario = new Usuario();
         usuario.setNombre(request.getNombre());
         usuario.setEmail(request.getEmail());
         usuario.setPassword(passwordEncoder.encode(request.getPassword())); // Encriptar contraseña
         usuario.setDni(request.getDni());
         usuario.setTelefono(request.getTelefono());
-        usuario.setRol(request.getRol() != null ? request.getRol() : "PACIENTE"); // Default PACIENTE
+        usuario.setRole(request.getRol() != null ? request.getRol() : "PACIENTE"); // Default PACIENTE
         usuario.setActivo(true);
 
-        // Guardar en base de datos
+        // Guardar vía puerto de dominio
         Usuario usuarioGuardado = usuarioRepository.save(usuario);
-        log.info("Usuario registrado exitosamente con ID: {}", usuarioGuardado.getIdUsuario());
+        log.info("Usuario registrado exitosamente con ID: {}", usuarioGuardado.getId());
 
         // Construir respuesta (sin password)
         return RegistroResponse.builder()
-                .idUsuario(usuarioGuardado.getIdUsuario())
+                .idUsuario(usuarioGuardado.getId())
                 .nombre(usuarioGuardado.getNombre())
                 .email(usuarioGuardado.getEmail())
                 .mensaje("Usuario registrado exitosamente")

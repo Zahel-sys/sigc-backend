@@ -2,7 +2,11 @@ package com.sigc.backend.application.service;
 
 import com.sigc.backend.application.mapper.UsuarioMapper;
 import com.sigc.backend.domain.exception.DomainException;
+import com.sigc.backend.domain.model.Usuario;
 import com.sigc.backend.domain.port.IUsuarioRepository;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * Application Service: Usuarios
@@ -20,6 +24,7 @@ import com.sigc.backend.domain.port.IUsuarioRepository;
  * - DIP: Depende de interfaces/puertos
  * - MVC: Separa lógica de negocio (domain) de HTTP (controller)
  */
+@Service
 public class UserApplicationService {
     
     private final IUsuarioRepository usuarioRepository;
@@ -34,10 +39,9 @@ public class UserApplicationService {
      * @param usuarioId ID del usuario
      * @return DTO del usuario
      */
-    public UsuarioMapper.UsuarioDTO getUserById(Long usuarioId) {
-        var usuario = usuarioRepository.findById(usuarioId)
+    public com.sigc.backend.domain.model.Usuario getUserById(Long usuarioId) {
+        return usuarioRepository.findById(usuarioId)
             .orElseThrow(() -> new DomainException("Usuario no encontrado", "USER_NOT_FOUND"));
-        return UsuarioMapper.toDTO(usuario);
     }
     
     /**
@@ -46,10 +50,9 @@ public class UserApplicationService {
      * @param email Email del usuario
      * @return DTO del usuario
      */
-    public UsuarioMapper.UsuarioDTO getUserByEmail(String email) {
-        var usuario = usuarioRepository.findByEmail(email)
+    public com.sigc.backend.domain.model.Usuario getUserByEmail(String email) {
+        return usuarioRepository.findByEmail(email)
             .orElseThrow(() -> new DomainException("Usuario no encontrado", "USER_NOT_FOUND"));
-        return UsuarioMapper.toDTO(usuario);
     }
     
     /**
@@ -69,5 +72,28 @@ public class UserApplicationService {
      */
     public Long countUsers() {
         return usuarioRepository.count();
+    }
+
+    // ----- Additional convenience methods used by controllers -----
+    public List<Usuario> listAllUsers() {
+        return usuarioRepository.findAll();
+    }
+
+    public Usuario createUser(Usuario usuario) {
+        return usuarioRepository.save(usuario);
+    }
+
+    public Usuario updateUser(Long id, Usuario usuario) {
+        var existente = usuarioRepository.findById(id)
+                .orElseThrow(() -> new DomainException("Usuario no encontrado", "USER_NOT_FOUND"));
+        existente.setNombre(usuario.getNombre());
+        existente.setEmail(usuario.getEmail());
+        existente.setRole(usuario.getRole());
+        existente.setActivo(usuario.getActivo());
+        return usuarioRepository.save(existente);
+    }
+
+    public void deleteUser(Long id) {
+        usuarioRepository.deleteById(id);
     }
 }

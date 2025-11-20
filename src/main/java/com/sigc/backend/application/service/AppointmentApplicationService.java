@@ -2,10 +2,17 @@ package com.sigc.backend.application.service;
 
 import com.sigc.backend.application.mapper.CitaMapper;
 import com.sigc.backend.domain.exception.DomainException;
+import com.sigc.backend.domain.model.Cita;
 import com.sigc.backend.domain.port.ICitaRepository;
 import com.sigc.backend.domain.service.usecase.appointment.CreateAppointmentRequest;
 import com.sigc.backend.domain.service.usecase.appointment.CreateAppointmentResponse;
 import com.sigc.backend.domain.service.usecase.appointment.CreateAppointmentUseCase;
+import com.sigc.backend.domain.service.usecase.appointment.CreateAppointmentRequest;
+import com.sigc.backend.domain.service.usecase.appointment.CreateAppointmentResponse;
+import com.sigc.backend.domain.service.usecase.appointment.CreateAppointmentUseCase;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * Application Service: Citas
@@ -21,9 +28,12 @@ import com.sigc.backend.domain.service.usecase.appointment.CreateAppointmentUseC
  * - DIP: Depende de interfaces/puertos
  * - MVC: Separa lógica de negocio (domain) de HTTP (controller)
  */
+@Service
 public class AppointmentApplicationService {
     
     private final ICitaRepository citaRepository;
+    
+    // Nota: esta clase ahora depende únicamente del puerto `ICitaRepository`.
     
     public AppointmentApplicationService(ICitaRepository citaRepository) {
         this.citaRepository = citaRepository;
@@ -39,6 +49,26 @@ public class AppointmentApplicationService {
     public CreateAppointmentResponse createAppointment(CreateAppointmentRequest request) {
         var createAppointmentUseCase = new CreateAppointmentUseCase(citaRepository);
         return createAppointmentUseCase.execute(request);
+    }
+
+    /**
+     * Obtiene todas las citas y las devuelve como DTOs.
+     */
+    public java.util.List<CitaMapper.CitaDTO> getAllAppointments() {
+        var citas = citaRepository.findAll();
+        return citas.stream().map(CitaMapper::toDTO).collect(java.util.stream.Collectors.toList());
+    }
+
+    /** Elimina una cita por ID (delegado al puerto). */
+    public void delete(Long id) {
+        citaRepository.deleteById(id);
+    }
+
+    /** Cancela una cita: marca estado y persiste (no gestiona horarios aquí). */
+    public void cancel(Long id) {
+        var cita = citaRepository.findById(id).orElseThrow(() -> new RuntimeException("Cita no encontrada"));
+        cita.setEstado("CANCELADA");
+        citaRepository.save(cita);
     }
     
     /**
