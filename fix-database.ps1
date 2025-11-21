@@ -10,6 +10,7 @@ Write-Host ""
 # Configuración
 $dbHost = "127.0.0.1"
 $dbUser = "root"
+# Nota: Estas variables se usan en la línea 86 del script (comando mysql)
 
 Write-Host "Opciones disponibles:" -ForegroundColor Yellow
 Write-Host "1. Corrección INCREMENTAL (mantiene datos existentes)" -ForegroundColor Green
@@ -79,6 +80,7 @@ foreach ($path in $mysqlPaths) {
 
 if ($mysqlExe) {
     Write-Host "✓ MySQL encontrado en: $mysqlExe" -ForegroundColor Green
+    Write-Host "Conectando a: $dbHost como usuario: $dbUser" -ForegroundColor Gray
     Write-Host "Ejecutando script..." -ForegroundColor Yellow
     
     try {
