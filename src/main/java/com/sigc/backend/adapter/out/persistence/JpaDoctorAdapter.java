@@ -46,17 +46,22 @@ public class JpaDoctorAdapter implements IDoctorRepository {
     @Override
     public Doctor save(Doctor doctor) {
         com.sigc.backend.model.Doctor jpaEntity = mapper.toJpaEntity(doctor);
+        if (jpaEntity == null) {
+            throw new IllegalArgumentException("No se pudo convertir el doctor a entidad JPA");
+        }
         com.sigc.backend.model.Doctor saved = jpaRepository.save(jpaEntity);
         return mapper.toDomain(saved);
     }
     
     @Override
     public void deleteById(Long id) {
-        jpaRepository.deleteById(id);
+        if (id != null) {
+            jpaRepository.deleteById(id);
+        }
     }
     
     @Override
     public boolean existsById(Long id) {
-        return jpaRepository.existsById(id);
+        return id != null && jpaRepository.existsById(id);
     }
 }

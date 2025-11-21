@@ -36,6 +36,9 @@ public class JpaUsuarioAdapter implements IUsuarioRepository {
     @Override
     public Usuario save(Usuario usuario) {
         com.sigc.backend.model.Usuario entity = toEntity(usuario);
+        if (entity == null) {
+            throw new IllegalArgumentException("No se pudo convertir el usuario a entidad JPA");
+        }
         com.sigc.backend.model.Usuario saved = usuarioRepository.save(entity);
         return toDomain(saved);
     }
@@ -52,7 +55,9 @@ public class JpaUsuarioAdapter implements IUsuarioRepository {
 
     @Override
     public void deleteById(Long id) {
-        usuarioRepository.deleteById(id);
+        if (id != null) {
+            usuarioRepository.deleteById(id);
+        }
     }
 
     // --- Mapping helpers ---

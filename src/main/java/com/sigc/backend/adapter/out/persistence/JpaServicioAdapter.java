@@ -46,17 +46,22 @@ public class JpaServicioAdapter implements IServicioRepository {
     @Override
     public Servicio save(Servicio servicio) {
         com.sigc.backend.model.Servicio jpaEntity = mapper.toJpaEntity(servicio);
+        if (jpaEntity == null) {
+            throw new IllegalArgumentException("No se pudo convertir el servicio a entidad JPA");
+        }
         com.sigc.backend.model.Servicio saved = jpaRepository.save(jpaEntity);
         return mapper.toDomain(saved);
     }
     
     @Override
     public void deleteById(Long id) {
-        jpaRepository.deleteById(id);
+        if (id != null) {
+            jpaRepository.deleteById(id);
+        }
     }
     
     @Override
     public boolean existsById(Long id) {
-        return jpaRepository.existsById(id);
+        return id != null && jpaRepository.existsById(id);
     }
 }

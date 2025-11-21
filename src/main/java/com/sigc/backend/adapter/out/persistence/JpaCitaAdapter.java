@@ -54,13 +54,18 @@ public class JpaCitaAdapter implements ICitaRepository {
     @Override
     public Cita save(Cita cita) {
         com.sigc.backend.model.Cita entity = toEntity(cita);
+        if (entity == null) {
+            throw new IllegalArgumentException("No se pudo convertir la cita a entidad JPA");
+        }
         com.sigc.backend.model.Cita saved = citaRepository.save(entity);
         return toDomain(saved);
     }
 
     @Override
     public void deleteById(Long id) {
-        citaRepository.deleteById(id);
+        if (id != null) {
+            citaRepository.deleteById(id);
+        }
     }
 
     @Override

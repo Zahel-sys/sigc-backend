@@ -46,17 +46,22 @@ public class JpaEspecialidadAdapter implements IEspecialidadRepository {
     @Override
     public Especialidad save(Especialidad especialidad) {
         com.sigc.backend.model.Especialidad jpaEntity = mapper.toJpaEntity(especialidad);
+        if (jpaEntity == null) {
+            throw new IllegalArgumentException("No se pudo convertir la especialidad a entidad JPA");
+        }
         com.sigc.backend.model.Especialidad saved = jpaRepository.save(jpaEntity);
         return mapper.toDomain(saved);
     }
     
     @Override
     public void deleteById(Long id) {
-        jpaRepository.deleteById(id);
+        if (id != null) {
+            jpaRepository.deleteById(id);
+        }
     }
     
     @Override
     public boolean existsById(Long id) {
-        return jpaRepository.existsById(id);
+        return id != null && jpaRepository.existsById(id);
     }
 }
