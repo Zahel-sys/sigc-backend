@@ -50,20 +50,54 @@ public class EspecialidadController {
     }
 
     @PostMapping
-    public ResponseEntity<?> crear(@Valid @RequestBody com.sigc.backend.model.Especialidad especialidadJpa) {
+    public ResponseEntity<?> crear(
+            @RequestParam String nombre,
+            @RequestParam(required = false) String descripcion,
+            @RequestParam(value = "imagen", required = false) MultipartFile imagenFile) {
         try {
-            log.info("Creando nueva especialidad: {}", especialidadJpa.getNombre());
-            Especialidad especialidad = especialidadMapper.toDomain(especialidadJpa);
+            log.info("📥 POST /especialidades");
+            log.info("  - nombre: {}", nombre);
+            log.info("  - descripcion: {}", descripcion);
+            log.info("  - imagenFile: {}", imagenFile != null ? imagenFile.getOriginalFilename() : "null");
+            
+            if (nombre == null || nombre.trim().isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "El nombre es obligatorio"));
+            }
+            
+            // Construir la especialidad
+            Especialidad.EspecialidadBuilder builder = Especialidad.builder()
+                    .nombre(nombre.trim());
+            
+            if (descripcion != null && !descripcion.trim().isEmpty()) {
+                builder.descripcion(descripcion.trim());
+            }
+            
+            // Guardar archivo si viene
+            if (imagenFile != null && !imagenFile.isEmpty()) {
+                String imagenGuardada = guardarImagen(imagenFile);
+                if (imagenGuardada != null) {
+                    builder.imagen(imagenGuardada);
+                }
+            }
+            
+            Especialidad especialidad = builder.build();
             Especialidad saved = especialidadApplicationService.createEspecialidad(especialidad);
-            log.info("Especialidad creada exitosamente con ID: {}", saved.getIdEspecialidad());
+            log.info("✅ Especialidad creada con ID: {}", saved.getIdEspecialidad());
+            
             return ResponseEntity.ok(especialidadMapper.toJpaEntity(saved));
         } catch (IllegalArgumentException e) {
-            log.warn("Error de validación: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
-        } catch (Exception e) {
-            log.error("Error al crear especialidad: {}", e.getMessage(), e);
+            log.warn("⚠️ Error de validación: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", e.getMessage()));
+        } catch (IOException e) {
+            log.error("❌ Error al guardar imagen: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error al crear la especialidad");
+                    .body(Map.of("message", "Error al guardar imagen: " + e.getMessage()));
+        } catch (Exception e) {
+            log.error("❌ Error al crear especialidad: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Error al crear la especialidad"));
         }
     }
 
@@ -135,6 +169,38 @@ public class EspecialidadController {
         }
     }
     
+    @NonNull
+    private MediaType determinarMediaType(String filename) {
+        MediaType defaultType = MediaType.APPLICATION_OCTET_STREAM;
+        if (defaultType == null) {
+            throw new IllegalStateException("MediaType.APPLICATION_OCTET_STREAM is null");
+        }
+        
+        if (filename == null) {
+            return defaultType;
+        }
+        
+        String lowerFilename = filename.toLowerCase();
+        MediaType mediaType;
+        
+        if (lowerFilename.endsWith(".png")) {
+            mediaType = MediaType.IMAGE_PNG;
+            return mediaType != null ? mediaType : defaultType;
+        } else if (lowerFilename.endsWith(".jpg") || lowerFilename.endsWith(".jpeg")) {
+            mediaType = MediaType.IMAGE_JPEG;
+            return mediaType != null ? mediaType : defaultType;
+        } else if (lowerFilename.endsWith(".webp")) {
+            try {
+                mediaType = MediaType.valueOf("image/webp");
+                return mediaType != null ? mediaType : defaultType;
+            } catch (Exception e) {
+                log.warn("No se pudo determinar MediaType para webp, usando default");
+                return defaultType;
+            }
+        }
+        return defaultType;
+    }
+    
     private String guardarImagen(MultipartFile file) throws IOException {
         if (file.getSize() > MAX_SIZE) {
             throw new IOException("El archivo excede los 5MB permitidos.");
@@ -178,15 +244,7 @@ public class EspecialidadController {
             }
             
             byte[] bytes = java.nio.file.Files.readAllBytes(imgFile.toPath());
-            MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
-            
-            if (filename.endsWith(".png")) {
-                mediaType = MediaType.IMAGE_PNG;
-            } else if (filename.endsWith(".jpg") || filename.endsWith(".jpeg")) {
-                mediaType = MediaType.IMAGE_JPEG;
-            } else if (filename.endsWith(".webp")) {
-                mediaType = MediaType.valueOf("image/webp");
-            }
+            MediaType mediaType = determinarMediaType(filename);
             
             return ResponseEntity.ok()
                     .contentType(mediaType)

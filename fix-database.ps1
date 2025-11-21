@@ -1,55 +1,55 @@
 # ============================================
-# Script de corrección automática de base de datos
+# Script de correccion automatica de base de datos
 # ============================================
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  CORRECCIÓN DE BASE DE DATOS SIGC_DB" -ForegroundColor Cyan
+Write-Host "  CORRECCION DE BASE DE DATOS SIGC_DB" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Configuración
+# Configuracion
 $dbHost = "127.0.0.1"
 $dbUser = "root"
-# Nota: Estas variables se usan en la línea 86 del script (comando mysql)
+# Nota: Estas variables se usan en la linea 86 del script (comando mysql)
 
 Write-Host "Opciones disponibles:" -ForegroundColor Yellow
-Write-Host "1. Corrección INCREMENTAL (mantiene datos existentes)" -ForegroundColor Green
+Write-Host "1. Correccion INCREMENTAL (mantiene datos existentes)" -ForegroundColor Green
 Write-Host "2. Recrear base de datos COMPLETA (elimina todo y recrea)" -ForegroundColor Red
 Write-Host ""
 
-$opcion = Read-Host "Selecciona una opción (1 o 2)"
+$opcion = Read-Host "Selecciona una opcion (1 o 2)"
 
 if ($opcion -eq "1") {
     Write-Host ""
-    Write-Host "=== OPCIÓN 1: Corrección Incremental ===" -ForegroundColor Green
-    Write-Host "Esta opción:" -ForegroundColor Yellow
+    Write-Host "=== OPCION 1: Correccion Incremental ===" -ForegroundColor Green
+    Write-Host "Esta opcion:" -ForegroundColor Yellow
     Write-Host "  - Mantiene todos los datos existentes" -ForegroundColor White
-    Write-Host "  - Corrige las foreign keys problemáticas" -ForegroundColor White
-    Write-Host "  - Agrega índices faltantes" -ForegroundColor White
+    Write-Host "  - Corrige las foreign keys problematicas" -ForegroundColor White
+    Write-Host "  - Agrega indices faltantes" -ForegroundColor White
     Write-Host ""
     
     $scriptFile = "database\fix_foreign_keys.sql"
     
 } elseif ($opcion -eq "2") {
     Write-Host ""
-    Write-Host "=== OPCIÓN 2: Recrear Base de Datos ===" -ForegroundColor Red
-    Write-Host "⚠️  ADVERTENCIA: Esta opción:" -ForegroundColor Red
-    Write-Host "  - ELIMINARÁ todos los datos existentes" -ForegroundColor White
-    Write-Host "  - Creará la estructura desde cero" -ForegroundColor White
-    Write-Host "  - Insertará datos de prueba" -ForegroundColor White
+    Write-Host "=== OPCION 2: Recrear Base de Datos ===" -ForegroundColor Red
+    Write-Host "ADVERTENCIA: Esta opcion:" -ForegroundColor Red
+    Write-Host "  - ELIMINARA todos los datos existentes" -ForegroundColor White
+    Write-Host "  - Creara la estructura desde cero" -ForegroundColor White
+    Write-Host "  - Insertara datos de prueba" -ForegroundColor White
     Write-Host ""
     
-    $confirmar = Read-Host "¿Estás seguro? Esto eliminará TODOS los datos (SI/NO)"
+    $confirmar = Read-Host "Estas seguro? Esto eliminara TODOS los datos (SI/NO)"
     
     if ($confirmar -ne "SI") {
-        Write-Host "Operación cancelada." -ForegroundColor Yellow
+        Write-Host "Operacion cancelada." -ForegroundColor Yellow
         exit
     }
     
     $scriptFile = "database\sigc_db_fixed.sql"
     
 } else {
-    Write-Host "Opción inválida. Saliendo..." -ForegroundColor Red
+    Write-Host "Opcion invalida. Saliendo..." -ForegroundColor Red
     exit
 }
 
@@ -62,12 +62,12 @@ if (-not (Test-Path $scriptFile)) {
 Write-Host ""
 Write-Host "Intentando ejecutar script SQL..." -ForegroundColor Cyan
 
-# Método 1: Intentar con mysql.exe (si está en PATH o en XAMPP)
+# Metodo 1: Intentar con mysql.exe (si esta en PATH o en XAMPP)
 $mysqlPaths = @(
     "C:\xampp\mysql\bin\mysql.exe",
     "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe",
     "C:\Program Files (x86)\MySQL\MySQL Server 8.0\bin\mysql.exe",
-    "mysql.exe"  # Si está en PATH
+    "mysql.exe"  # Si esta en PATH
 )
 
 $mysqlExe = $null
@@ -79,43 +79,43 @@ foreach ($path in $mysqlPaths) {
 }
 
 if ($mysqlExe) {
-    Write-Host "✓ MySQL encontrado en: $mysqlExe" -ForegroundColor Green
+    Write-Host "MySQL encontrado en: $mysqlExe" -ForegroundColor Green
     Write-Host "Conectando a: $dbHost como usuario: $dbUser" -ForegroundColor Gray
     Write-Host "Ejecutando script..." -ForegroundColor Yellow
     
     try {
-        # Ejecutar sin contraseña (configuración XAMPP por defecto)
+        # Ejecutar sin contrasena (configuracion XAMPP por defecto)
         & $mysqlExe -h $dbHost -u $dbUser -e "source $scriptFile"
         
         Write-Host ""
-        Write-Host "✓ Script ejecutado exitosamente!" -ForegroundColor Green
+        Write-Host "Script ejecutado exitosamente!" -ForegroundColor Green
         
     } catch {
         Write-Host ""
-        Write-Host "✗ Error al ejecutar el script:" -ForegroundColor Red
+        Write-Host "Error al ejecutar el script:" -ForegroundColor Red
         Write-Host $_.Exception.Message -ForegroundColor Red
         Write-Host ""
         Write-Host "Ejecuta manualmente el script en phpMyAdmin:" -ForegroundColor Yellow
         Write-Host "  1. Abre http://localhost/phpmyadmin" -ForegroundColor White
         Write-Host "  2. Selecciona la base de datos 'sigc_db'" -ForegroundColor White
-        Write-Host "  3. Ve a la pestaña 'SQL'" -ForegroundColor White
+        Write-Host "  3. Ve a la pestana 'SQL'" -ForegroundColor White
         Write-Host "  4. Copia y pega el contenido de: $scriptFile" -ForegroundColor White
         Write-Host "  5. Haz clic en 'Continuar'" -ForegroundColor White
         exit
     }
     
 } else {
-    Write-Host "⚠️  MySQL CLI no encontrado en las rutas comunes." -ForegroundColor Yellow
+    Write-Host "MySQL CLI no encontrado en las rutas comunes." -ForegroundColor Yellow
     Write-Host ""
     Write-Host "Por favor, ejecuta el script manualmente:" -ForegroundColor Yellow
     Write-Host "  1. Abre http://localhost/phpmyadmin" -ForegroundColor White
     Write-Host "  2. Selecciona la base de datos 'sigc_db'" -ForegroundColor White
-    Write-Host "  3. Ve a la pestaña 'SQL'" -ForegroundColor White
+    Write-Host "  3. Ve a la pestana 'SQL'" -ForegroundColor White
     Write-Host "  4. Copia y pega el contenido de: $scriptFile" -ForegroundColor White
     Write-Host "  5. Haz clic en 'Continuar'" -ForegroundColor White
     Write-Host ""
     
-    $abrirArchivo = Read-Host "¿Abrir el archivo SQL ahora? (S/N)"
+    $abrirArchivo = Read-Host "Abrir el archivo SQL ahora? (S/N)"
     if ($abrirArchivo -eq "S" -or $abrirArchivo -eq "s") {
         Start-Process notepad.exe $scriptFile
     }
@@ -133,5 +133,5 @@ Write-Host "  .\mvnw.cmd spring-boot:run" -ForegroundColor White
 Write-Host ""
 Write-Host "O ejecuta:" -ForegroundColor Yellow
 Write-Host "  .\fix-database-and-run.ps1" -ForegroundColor White
-Write-Host "  (para corregir y arrancar automáticamente)" -ForegroundColor Gray
+Write-Host "  (para corregir y arrancar automaticamente)" -ForegroundColor Gray
 Write-Host ""
