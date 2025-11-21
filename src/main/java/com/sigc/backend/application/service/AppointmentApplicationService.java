@@ -2,14 +2,11 @@ package com.sigc.backend.application.service;
 
 import com.sigc.backend.application.mapper.CitaMapper;
 import com.sigc.backend.domain.exception.DomainException;
-import com.sigc.backend.domain.model.Cita;
 import com.sigc.backend.domain.port.ICitaRepository;
 import com.sigc.backend.domain.service.usecase.appointment.CreateAppointmentRequest;
 import com.sigc.backend.domain.service.usecase.appointment.CreateAppointmentResponse;
 import com.sigc.backend.domain.service.usecase.appointment.CreateAppointmentUseCase;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 /**
  * Application Service: Citas

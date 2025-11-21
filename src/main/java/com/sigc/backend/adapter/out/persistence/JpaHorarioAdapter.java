@@ -39,7 +39,7 @@ public class JpaHorarioAdapter implements IHorarioRepository {
     @Override
     public List<Horario> findByIdDoctor(Long idDoctor) {
         return jpaRepository.findAll().stream()
-                .filter(h -> h.getDoctor() != null && h.getDoctor().getIdDoctor().equals(idDoctor))
+                .filter(h -> h.getDoctor() != null && h.getDoctor().getIdDoctor() != null && h.getDoctor().getIdDoctor().equals(idDoctor))
                 .map(mapper::toDomain)
                 .collect(Collectors.toList());
     }
@@ -64,7 +64,9 @@ public class JpaHorarioAdapter implements IHorarioRepository {
     public List<Horario> findByIdDoctorAndFechaAndDisponibleTrue(Long idDoctor, LocalDate fecha) {
         return jpaRepository.findAll().stream()
                 .filter(h -> h.getDoctor() != null 
+                        && h.getDoctor().getIdDoctor() != null
                         && h.getDoctor().getIdDoctor().equals(idDoctor)
+                        && h.getFecha() != null
                         && h.getFecha().equals(fecha)
                         && h.isDisponible())
                 .map(mapper::toDomain)
@@ -74,17 +76,22 @@ public class JpaHorarioAdapter implements IHorarioRepository {
     @Override
     public Horario save(Horario horario) {
         com.sigc.backend.model.Horario jpaEntity = mapper.toJpaEntity(horario);
+        if (jpaEntity == null) {
+            throw new IllegalArgumentException("No se pudo convertir el horario a entidad JPA");
+        }
         com.sigc.backend.model.Horario saved = jpaRepository.save(jpaEntity);
         return mapper.toDomain(saved);
     }
     
     @Override
     public void deleteById(Long id) {
-        jpaRepository.deleteById(id);
+        if (id != null) {
+            jpaRepository.deleteById(id);
+        }
     }
     
     @Override
     public boolean existsById(Long id) {
-        return jpaRepository.existsById(id);
+        return id != null && jpaRepository.existsById(id);
     }
 }

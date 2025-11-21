@@ -38,7 +38,7 @@ public class JpaServicioAdapter implements IServicioRepository {
     @Override
     public List<Servicio> findByNombreServicioContaining(String nombre) {
         return jpaRepository.findAll().stream()
-                .filter(s -> s.getNombreServicio().toLowerCase().contains(nombre.toLowerCase()))
+                .filter(s -> s.getNombreServicio() != null && s.getNombreServicio().toLowerCase().contains(nombre.toLowerCase()))
                 .map(mapper::toDomain)
                 .collect(Collectors.toList());
     }

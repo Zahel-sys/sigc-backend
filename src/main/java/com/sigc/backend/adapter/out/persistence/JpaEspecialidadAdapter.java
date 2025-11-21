@@ -38,7 +38,7 @@ public class JpaEspecialidadAdapter implements IEspecialidadRepository {
     @Override
     public Optional<Especialidad> findByNombre(String nombre) {
         return jpaRepository.findAll().stream()
-                .filter(e -> e.getNombre().equalsIgnoreCase(nombre))
+                .filter(e -> e.getNombre() != null && e.getNombre().equalsIgnoreCase(nombre))
                 .findFirst()
                 .map(mapper::toDomain);
     }

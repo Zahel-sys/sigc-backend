@@ -59,7 +59,9 @@ public class JpaUsuarioAdapter implements IUsuarioRepository {
     private Usuario toDomain(com.sigc.backend.model.Usuario e) {
         if (e == null) return null;
         Usuario u = new Usuario();
-        u.setId(e.getIdUsuario());
+        if (e.getIdUsuario() != null) {
+            u.setId(e.getIdUsuario());
+        }
         u.setEmail(e.getEmail());
         u.setPassword(e.getPassword());
         u.setNombre(e.getNombre());
@@ -79,7 +81,9 @@ public class JpaUsuarioAdapter implements IUsuarioRepository {
 
     private com.sigc.backend.model.Usuario toEntity(Usuario u) {
         com.sigc.backend.model.Usuario e = new com.sigc.backend.model.Usuario();
-        e.setIdUsuario(u.getId());
+        if (u.getId() != null) {
+            e.setIdUsuario(u.getId());
+        }
         e.setNombre(u.getNombre());
         e.setEmail(u.getEmail());
         e.setPassword(u.getPassword());

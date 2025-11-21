@@ -38,7 +38,7 @@ public class JpaDoctorAdapter implements IDoctorRepository {
     @Override
     public List<Doctor> findByEspecialidad(String especialidad) {
         return jpaRepository.findAll().stream()
-                .filter(d -> d.getEspecialidad().equalsIgnoreCase(especialidad))
+                .filter(d -> d.getEspecialidad() != null && d.getEspecialidad().equalsIgnoreCase(especialidad))
                 .map(mapper::toDomain)
                 .collect(Collectors.toList());
     }
