@@ -59,9 +59,10 @@ public class MeController {
                 email = jwtUtil.getEmailFromToken(token);
                 
                 // Buscar usuario por email
-                Usuario usuarioTemp = userApplicationService.getUserByEmail(email)
-                        .orElse(null);
-                if (usuarioTemp == null) {
+                try {
+                    Usuario usuarioTemp = userApplicationService.getUserByEmail(email);
+                    idUsuario = usuarioTemp.getId();
+                } catch (Exception ex) {
                     log.error("Usuario no encontrado con email: {}", email);
                     return ResponseEntity.status(HttpStatus.NOT_FOUND)
                             .body(Map.of(
@@ -69,13 +70,10 @@ public class MeController {
                                 "message", "Token antiguo detectado. Por favor, cierra sesión y vuelve a hacer login."
                             ));
                 }
-                idUsuario = usuarioTemp.getId();
             }
 
             // Buscar usuario por ID
-            final Long finalIdUsuario = idUsuario;
-            Usuario usuario = userApplicationService.getUserById(finalIdUsuario)
-                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + finalIdUsuario));
+            Usuario usuario = userApplicationService.getUserById(idUsuario);
 
             // Preparar respuesta con todos los datos
             Map<String, Object> response = new HashMap<>();

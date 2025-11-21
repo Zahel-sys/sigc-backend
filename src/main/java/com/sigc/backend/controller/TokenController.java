@@ -122,13 +122,12 @@ public class TokenController {
             // Determinar si el subject es ID o email
             try {
                 Long userId = Long.parseLong(subject);
-                usuario = userApplicationService.getUserById(userId)
-                        .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                usuario = userApplicationService.getUserById(userId);
             } catch (NumberFormatException e) {
                 // El subject es un email (token antiguo)
-                usuario = userApplicationService.getUserByEmail(subject)
-                        .orElse(null);
-                if (usuario == null) {
+                try {
+                    usuario = userApplicationService.getUserByEmail(subject);
+                } catch (Exception ex) {
                     response.put("error", "Usuario no encontrado con email: " + subject);
                     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
                 }
