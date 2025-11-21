@@ -47,25 +47,21 @@ public class AuthController {
     public ResponseEntity<RegistroResponse> register(@Valid @RequestBody RegistroRequest request) {
         log.info("Recibida petición de registro para: {}", request.getEmail());
         
-        // Construir request de dominio
-        RegisterUseCase.RegisterRequest registerRequest = new RegisterUseCase.RegisterRequest(
+        // Construir request de dominio (RegisterUseCase usa LoginRequest internamente)
+        LoginRequest registerRequest = new LoginRequest(
             request.getEmail(),
-            request.getPassword(),
-            request.getPasswordConfirmar(),
-            request.getNombre(),
-            request.getDni(),
-            request.getTelefono()
+            request.getPassword()
         );
         
         // Delegar a Application Service
-        RegisterUseCase.RegisterResponse registerResponse = authApplicationService.register(registerRequest);
+        LoginResponse registerResponse = authApplicationService.register(registerRequest);
         
         // Mapear a DTO de respuesta
         RegistroResponse response = new RegistroResponse(
             registerResponse.getUserId(),
             registerResponse.getEmail(),
             registerResponse.getToken(),
-            registerResponse.getRol()
+            registerResponse.getRole()
         );
         
         log.info("Usuario registrado exitosamente: {}", response.getIdUsuario());
