@@ -3,7 +3,6 @@ package com.sigc.backend.adapter.out.persistence;
 import com.sigc.backend.domain.model.Cita;
 import com.sigc.backend.domain.port.ICitaRepository;
 import com.sigc.backend.repository.CitaRepository;
-import com.sigc.backend.repository.HorarioRepository;
 import com.sigc.backend.repository.UsuarioRepository;
 import com.sigc.backend.repository.DoctorRepository;
 import org.springframework.stereotype.Repository;
@@ -19,16 +18,13 @@ public class JpaCitaAdapter implements ICitaRepository {
     private final CitaRepository citaRepository;
     private final UsuarioRepository usuarioRepository;
     private final DoctorRepository doctorRepository;
-    private final HorarioRepository horarioRepository;
 
     public JpaCitaAdapter(CitaRepository citaRepository,
                           UsuarioRepository usuarioRepository,
-                          DoctorRepository doctorRepository,
-                          HorarioRepository horarioRepository) {
+                          DoctorRepository doctorRepository) {
         this.citaRepository = citaRepository;
         this.usuarioRepository = usuarioRepository;
         this.doctorRepository = doctorRepository;
-        this.horarioRepository = horarioRepository;
     }
 
     @Override
@@ -38,11 +34,17 @@ public class JpaCitaAdapter implements ICitaRepository {
 
     @Override
     public List<Cita> findByUsuarioId(Long usuarioId) {
+        if (usuarioId == null) {
+            return List.of();
+        }
         return citaRepository.findByUsuario_IdUsuario(usuarioId).stream().map(this::toDomain).collect(Collectors.toList());
     }
 
     @Override
     public List<Cita> findByDoctorId(Long doctorId) {
+        if (doctorId == null) {
+            return List.of();
+        }
         return citaRepository.findAll().stream()
                 .filter(e -> e.getDoctor() != null && e.getDoctor().getIdDoctor() != null && e.getDoctor().getIdDoctor().equals(doctorId))
                 .map(this::toDomain)
@@ -76,8 +78,12 @@ public class JpaCitaAdapter implements ICitaRepository {
         if (e == null) return null;
         Cita d = new Cita();
         d.setId(e.getIdCita());
-        if (e.getUsuario() != null) d.setUsuarioId(e.getUsuario().getIdUsuario());
-        if (e.getDoctor() != null) d.setDoctorId(e.getDoctor().getIdDoctor());
+        if (e.getUsuario() != null && e.getUsuario().getIdUsuario() != null) {
+            d.setUsuarioId(e.getUsuario().getIdUsuario());
+        }
+        if (e.getDoctor() != null && e.getDoctor().getIdDoctor() != null) {
+            d.setDoctorId(e.getDoctor().getIdDoctor());
+        }
         if (e.getFechaCita() != null) {
             if (e.getHoraCita() != null) {
                 d.setFecha(LocalDateTime.of(e.getFechaCita(), e.getHoraCita()));
