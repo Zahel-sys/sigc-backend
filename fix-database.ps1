@@ -10,7 +10,6 @@ Write-Host ""
 # Configuración
 $dbHost = "127.0.0.1"
 $dbUser = "root"
-$dbName = "sigc_db"
 
 Write-Host "Opciones disponibles:" -ForegroundColor Yellow
 Write-Host "1. Corrección INCREMENTAL (mantiene datos existentes)" -ForegroundColor Green
