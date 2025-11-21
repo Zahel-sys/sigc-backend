@@ -1,7 +1,8 @@
 package com.sigc.backend.controller;
 
-import com.sigc.backend.model.Doctor;
-import com.sigc.backend.repository.DoctorRepository;
+import com.sigc.backend.application.mapper.DoctorMapper;
+import com.sigc.backend.application.service.DoctorApplicationService;
+import com.sigc.backend.domain.model.Doctor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -15,6 +16,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -23,16 +25,20 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DoctorController {
 
-    private final DoctorRepository doctorRepository;
+    private final DoctorApplicationService doctorApplicationService;
+    private final DoctorMapper doctorMapper;
    private final String BASE_UPLOAD_DIR = "C:/sigc/uploads/doctores/";
 
     private final List<String> EXTENSIONES_PERMITIDAS = Arrays.asList("jpg", "jpeg", "png", "webp");
     private final long MAX_SIZE = 5 * 1024 * 1024;
 
     @GetMapping
-    public List<Doctor> listar() {
+    public List<com.sigc.backend.model.Doctor> listar() {
         try {
-            return doctorRepository.findAll();
+            List<Doctor> doctors = doctorApplicationService.getAllDoctors();
+            return doctors.stream()
+                    .map(doctorMapper::toJpaEntity)
+                    .collect(Collectors.toList());
         } catch (Exception e) {
             log.error("Error al listar doctores: {}", e.getMessage());
             return Collections.emptyList();
@@ -47,18 +53,22 @@ public class DoctorController {
             @RequestParam(value = "imagen", required = false) MultipartFile imagen) {
 
         try {
-            Doctor doctor = new Doctor();
-            doctor.setNombre(nombre);
-            doctor.setEspecialidad(especialidad);
-            doctor.setCupoPacientes(cupoPacientes);
+            Doctor doctor = Doctor.builder()
+                    .nombre(nombre)
+                    .especialidad(especialidad)
+                    .cupoPacientes(cupoPacientes)
+                    .build();
 
             if (imagen != null && !imagen.isEmpty()) {
                 doctor.setImagen(guardarImagen(imagen));
             }
 
-            Doctor saved = doctorRepository.save(doctor);
-            return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+            Doctor saved = doctorApplicationService.createDoctor(doctor);
+            return ResponseEntity.status(HttpStatus.CREATED).body(doctorMapper.toJpaEntity(saved));
 
+        } catch (IllegalArgumentException e) {
+            log.warn("Validación fallida al crear doctor: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (Exception e) {
             log.error("Error al crear doctor: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -75,8 +85,8 @@ public class DoctorController {
             @RequestParam(value = "imagen", required = false) MultipartFile imagen) {
 
         try {
-            Doctor existente = doctorRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Doctor no encontrado"));
+            Doctor existente = doctorApplicationService.getDoctorById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Doctor no encontrado"));
 
             if (nombre != null) existente.setNombre(nombre);
             if (especialidad != null) existente.setEspecialidad(especialidad);
@@ -89,9 +99,12 @@ public class DoctorController {
                 }
             }
 
-            Doctor doctorGuardado = doctorRepository.save(existente);
-            return ResponseEntity.ok(doctorGuardado);
+            Doctor doctorGuardado = doctorApplicationService.updateDoctor(id, existente);
+            return ResponseEntity.ok(doctorMapper.toJpaEntity(doctorGuardado));
 
+        } catch (IllegalArgumentException e) {
+            log.warn("Error de validación al actualizar doctor: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (Exception e) {
             log.error("Error al actualizar doctor: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -102,9 +115,13 @@ public class DoctorController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> eliminar(@PathVariable Long id) {
         try {
-            doctorRepository.deleteById(id);
+            doctorApplicationService.deleteDoctor(id);
             return ResponseEntity.ok().build();
+        } catch (IllegalArgumentException e) {
+            log.warn("Error al eliminar doctor: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         } catch (Exception e) {
+            log.error("Error al eliminar doctor: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error al eliminar doctor");
         }

@@ -1,9 +1,10 @@
 package com.sigc.backend.controller;
 
-import com.sigc.backend.model.Horario;
-import com.sigc.backend.repository.HorarioRepository;
+import com.sigc.backend.application.mapper.HorarioMapper;
+import com.sigc.backend.application.service.HorarioApplicationService;
+import com.sigc.backend.domain.model.Horario;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -11,23 +12,27 @@ import org.springframework.lang.NonNull;
 import jakarta.validation.Valid;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
 @RequestMapping("/horarios")
 @CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:5175"})
+@RequiredArgsConstructor
 public class HorarioController {
 
-    @Autowired
-    private HorarioRepository horarioRepository;
+    private final HorarioApplicationService horarioApplicationService;
+    private final HorarioMapper horarioMapper;
 
     @GetMapping
-    public List<Horario> listar() {
+    public List<com.sigc.backend.model.Horario> listar() {
         try {
             log.info("Listando todos los horarios");
-            List<Horario> horarios = horarioRepository.findAll();
+            List<Horario> horarios = horarioApplicationService.getAllHorarios();
             log.info("Se encontraron {} horarios", horarios.size());
-            return horarios;
+            return horarios.stream()
+                    .map(horarioMapper::toJpaEntity)
+                    .collect(Collectors.toList());
         } catch (Exception e) {
             log.error("Error al listar horarios: {}", e.getMessage(), e);
             return Collections.emptyList();
@@ -35,12 +40,14 @@ public class HorarioController {
     }
 
     @GetMapping("/doctor/{idDoctor}")
-    public List<Horario> listarPorDoctor(@PathVariable Long idDoctor) {
+    public List<com.sigc.backend.model.Horario> listarPorDoctor(@PathVariable Long idDoctor) {
         try {
             log.info("Listando horarios disponibles del doctor ID: {}", idDoctor);
-            List<Horario> horarios = horarioRepository.findByDoctor_IdDoctorAndDisponibleTrue(idDoctor);
+            List<Horario> horarios = horarioApplicationService.getHorariosDisponiblesByDoctorAndFecha(idDoctor, java.time.LocalDate.now());
             log.info("Doctor {} tiene {} horarios disponibles", idDoctor, horarios.size());
-            return horarios;
+            return horarios.stream()
+                    .map(horarioMapper::toJpaEntity)
+                    .collect(Collectors.toList());
         } catch (Exception e) {
             log.error("Error al listar horarios del doctor {}: {}", idDoctor, e.getMessage(), e);
             return Collections.emptyList();
@@ -48,12 +55,16 @@ public class HorarioController {
     }
 
     @PostMapping
-    public ResponseEntity<?> crear(@Valid @RequestBody Horario horario) {
+    public ResponseEntity<?> crear(@Valid @RequestBody com.sigc.backend.model.Horario horarioJpa) {
         try {
-            log.info("Creando nuevo horario para doctor ID: {}", horario.getDoctor().getIdDoctor());
-            Horario saved = horarioRepository.save(horario);
+            log.info("Creando nuevo horario para doctor ID: {}", horarioJpa.getDoctor().getIdDoctor());
+            Horario horario = horarioMapper.toDomain(horarioJpa);
+            Horario saved = horarioApplicationService.createHorario(horario);
             log.info("Horario creado exitosamente con ID: {}", saved.getIdHorario());
-            return ResponseEntity.ok(saved);
+            return ResponseEntity.ok(horarioMapper.toJpaEntity(saved));
+        } catch (IllegalArgumentException e) {
+            log.warn("Error de validación: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (Exception e) {
             log.error("Error al crear horario: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -62,22 +73,16 @@ public class HorarioController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> actualizar(@PathVariable @NonNull Long id, @Valid @RequestBody Horario horario) {
+    public ResponseEntity<?> actualizar(@PathVariable @NonNull Long id, @Valid @RequestBody com.sigc.backend.model.Horario horarioJpa) {
         try {
             log.info("Actualizando horario ID: {}", id);
-            Horario existente = horarioRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Horario no encontrado con ID: " + id));
-            
-            if (horario.getFecha() != null) existente.setFecha(horario.getFecha());
-            if (horario.getTurno() != null) existente.setTurno(horario.getTurno());
-            if (horario.getHoraInicio() != null) existente.setHoraInicio(horario.getHoraInicio());
-            if (horario.getHoraFin() != null) existente.setHoraFin(horario.getHoraFin());
-            existente.setDisponible(horario.isDisponible());
-            if (horario.getDoctor() != null) existente.setDoctor(horario.getDoctor());
-            
-            Horario actualizado = horarioRepository.save(existente);
+            Horario horario = horarioMapper.toDomain(horarioJpa);
+            Horario actualizado = horarioApplicationService.updateHorario(id, horario);
             log.info("Horario {} actualizado exitosamente", id);
-            return ResponseEntity.ok(actualizado);
+            return ResponseEntity.ok(horarioMapper.toJpaEntity(actualizado));
+        } catch (IllegalArgumentException e) {
+            log.warn("Error de validación: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (Exception e) {
             log.error("Error al actualizar horario {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -89,13 +94,14 @@ public class HorarioController {
     public ResponseEntity<?> reservar(@PathVariable Long id) {
         try {
             log.info("Reservando horario ID: {}", id);
-            Horario horario = horarioRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Horario no encontrado con ID: " + id));
-            
-            horario.setDisponible(false);
-            Horario reservado = horarioRepository.save(horario);
+            horarioApplicationService.marcarHorarioNoDisponible(id);
+            Horario horario = horarioApplicationService.getHorarioById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Horario no encontrado"));
             log.info("Horario {} reservado exitosamente", id);
-            return ResponseEntity.ok(reservado);
+            return ResponseEntity.ok(horarioMapper.toJpaEntity(horario));
+        } catch (IllegalArgumentException e) {
+            log.warn("Error: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         } catch (Exception e) {
             log.error("Error al reservar horario {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -107,9 +113,12 @@ public class HorarioController {
     public ResponseEntity<?> eliminar(@PathVariable Long id) {
         try {
             log.info("Eliminando horario ID: {}", id);
-            horarioRepository.deleteById(id);
+            horarioApplicationService.deleteHorario(id);
             log.info("Horario {} eliminado exitosamente", id);
             return ResponseEntity.ok().build();
+        } catch (IllegalArgumentException e) {
+            log.warn("Error: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         } catch (Exception e) {
             log.error("Error al eliminar horario {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
