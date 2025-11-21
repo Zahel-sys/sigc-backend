@@ -117,10 +117,16 @@ public class JpaCitaAdapter implements ICitaRepository {
         }
         e.setEstado(d.getEstado());
         if (d.getUsuarioId() != null) {
-            e.setUsuario(usuarioRepository.findById(d.getUsuarioId()).orElse(null));
+            Long usuarioId = d.getUsuarioId();
+            if (usuarioId != null) {
+                e.setUsuario(usuarioRepository.findById(usuarioId).orElse(null));
+            }
         }
         if (d.getDoctorId() != null) {
-            e.setDoctor(doctorRepository.findById(d.getDoctorId()).orElse(null));
+            Long doctorId = d.getDoctorId();
+            if (doctorId != null) {
+                e.setDoctor(doctorRepository.findById(doctorId).orElse(null));
+            }
         }
         // horario association not set here
         return e;
