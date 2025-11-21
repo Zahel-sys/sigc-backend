@@ -77,7 +77,9 @@ public class JpaCitaAdapter implements ICitaRepository {
     private Cita toDomain(com.sigc.backend.model.Cita e) {
         if (e == null) return null;
         Cita d = new Cita();
-        d.setId(e.getIdCita());
+        if (e.getIdCita() != null) {
+            d.setId(e.getIdCita());
+        }
         if (e.getUsuario() != null && e.getUsuario().getIdUsuario() != null) {
             d.setUsuarioId(e.getUsuario().getIdUsuario());
         }
@@ -98,7 +100,9 @@ public class JpaCitaAdapter implements ICitaRepository {
 
     private com.sigc.backend.model.Cita toEntity(Cita d) {
         com.sigc.backend.model.Cita e = new com.sigc.backend.model.Cita();
-        e.setIdCita(d.getId());
+        if (d.getId() != null) {
+            e.setIdCita(d.getId());
+        }
         if (d.getFecha() != null) {
             e.setFechaCita(d.getFecha().toLocalDate());
             e.setHoraCita(d.getFecha().toLocalTime());
