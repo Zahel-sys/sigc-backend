@@ -20,6 +20,9 @@ public class JpaUsuarioAdapter implements IUsuarioRepository {
 
     @Override
     public Optional<Usuario> findById(Long id) {
+        if (id == null) {
+            return Optional.empty();
+        }
         return usuarioRepository.findById(id).map(this::toDomain);
     }
 

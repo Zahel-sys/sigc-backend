@@ -31,6 +31,9 @@ public class JpaEspecialidadAdapter implements IEspecialidadRepository {
     
     @Override
     public Optional<Especialidad> findById(Long id) {
+        if (id == null) {
+            return Optional.empty();
+        }
         return jpaRepository.findById(id)
                 .map(mapper::toDomain);
     }

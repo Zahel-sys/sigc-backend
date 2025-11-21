@@ -29,6 +29,9 @@ public class JpaCitaAdapter implements ICitaRepository {
 
     @Override
     public Optional<Cita> findById(Long id) {
+        if (id == null) {
+            return Optional.empty();
+        }
         return citaRepository.findById(id).map(this::toDomain);
     }
 

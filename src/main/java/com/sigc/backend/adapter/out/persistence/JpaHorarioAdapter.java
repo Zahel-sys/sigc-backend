@@ -32,6 +32,9 @@ public class JpaHorarioAdapter implements IHorarioRepository {
     
     @Override
     public Optional<Horario> findById(Long id) {
+        if (id == null) {
+            return Optional.empty();
+        }
         return jpaRepository.findById(id)
                 .map(mapper::toDomain);
     }
