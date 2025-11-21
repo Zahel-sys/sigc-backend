@@ -137,11 +137,44 @@ INSERT INTO horarios (fecha, turno, hora_inicio, hora_fin, disponible, id_doctor
 ('2025-11-27', 'Tarde', '14:00:00', '17:00:00', 1, 4),
 ('2025-11-28', 'Mañana', '08:30:00', '11:30:00', 1, 5);
 
+-- Usuarios de prueba (pacientes)
+INSERT INTO usuarios (nombre, email, password, dni, telefono, rol, activo) VALUES
+('Juan Pérez', 'juan@cliente.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhCu', '12345678', '987654321', 'PACIENTE', 1),
+('María López', 'maria@cliente.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhCu', '87654321', '912345678', 'PACIENTE', 1),
+('Carlos Ramírez', 'carlos@cliente.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhCu', '65432198', '934567890', 'PACIENTE', 1);
+
+-- Citas de ejemplo
+INSERT INTO citas (fecha_cita, hora_cita, turno, estado, id_usuario, id_doctor, id_horario) VALUES
+('2025-11-25', '09:00:00', 'Mañana', 'ACTIVA', 2, 1, 1),
+('2025-11-25', '14:00:00', 'Tarde', 'ACTIVA', 3, 2, 2),
+('2025-11-26', '09:00:00', 'Mañana', 'CANCELADA', 4, 3, 3),
+('2025-11-27', '14:00:00', 'Tarde', 'ACTIVA', 2, 4, 4),
+('2025-11-28', '08:30:00', 'Mañana', 'COMPLETADA', 3, 5, 5);
+
 -- ============================================
 -- VERIFICACIÓN
 -- ============================================
-SELECT 'Base de datos creada exitosamente' AS resultado;
-SELECT COUNT(*) AS total_usuarios FROM usuarios;
-SELECT COUNT(*) AS total_doctores FROM doctores;
-SELECT COUNT(*) AS total_especialidades FROM especialidades;
-SELECT COUNT(*) AS total_horarios FROM horarios;
+SELECT '✅ Base de datos creada exitosamente' AS resultado;
+SELECT 
+    (SELECT COUNT(*) FROM usuarios) AS total_usuarios,
+    (SELECT COUNT(*) FROM doctores) AS total_doctores,
+    (SELECT COUNT(*) FROM especialidades) AS total_especialidades,
+    (SELECT COUNT(*) FROM horarios) AS total_horarios,
+    (SELECT COUNT(*) FROM citas) AS total_citas,
+    (SELECT COUNT(*) FROM servicios) AS total_servicios;
+
+-- Mostrar resumen de datos insertados
+SELECT 'Usuarios creados:' AS info;
+SELECT id_usuario, nombre, email, rol FROM usuarios;
+
+SELECT 'Doctores creados:' AS info;
+SELECT id_doctor, nombre, especialidad, cupo_pacientes FROM doctores;
+
+SELECT 'Especialidades creadas:' AS info;
+SELECT id_especialidad, nombre, descripcion FROM especialidades;
+
+SELECT 'Horarios creados:' AS info;
+SELECT id_horario, fecha, turno, hora_inicio, hora_fin, disponible, id_doctor FROM horarios;
+
+SELECT 'Citas creadas:' AS info;
+SELECT id_cita, fecha_cita, hora_cita, estado, id_usuario, id_doctor, id_horario FROM citas;

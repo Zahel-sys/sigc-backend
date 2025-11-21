@@ -110,6 +110,39 @@ INSERT IGNORE INTO usuarios (nombre, email, password, dni, telefono, rol, activo
 VALUES ('Administrador', 'admin@sigc.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhCu', '00000000', '999999999', 'ADMIN', 1);
 
 -- ============================================
+-- PASO 6: Insertar datos de ejemplo si la BD está vacía
+-- ============================================
+
+-- Insertar usuarios de prueba si no hay pacientes
+INSERT INTO usuarios (nombre, email, password, dni, telefono, rol, activo)
+SELECT * FROM (SELECT 
+    'Juan Pérez' AS nombre,
+    'juan@cliente.com' AS email,
+    '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhCu' AS password,
+    '12345678' AS dni,
+    '987654321' AS telefono,
+    'PACIENTE' AS rol,
+    1 AS activo
+) AS tmp
+WHERE NOT EXISTS (
+    SELECT 1 FROM usuarios WHERE email = 'juan@cliente.com'
+);
+
+INSERT INTO usuarios (nombre, email, password, dni, telefono, rol, activo)
+SELECT * FROM (SELECT 
+    'María López' AS nombre,
+    'maria@cliente.com' AS email,
+    '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhCu' AS password,
+    '87654321' AS dni,
+    '912345678' AS telefono,
+    'PACIENTE' AS rol,
+    1 AS activo
+) AS tmp
+WHERE NOT EXISTS (
+    SELECT 1 FROM usuarios WHERE email = 'maria@cliente.com'
+);
+
+-- ============================================
 -- VERIFICACIÓN FINAL
 -- ============================================
 SELECT '✅ Migración completada exitosamente' AS resultado;
@@ -123,3 +156,18 @@ SELECT
 
 -- Mostrar tablas actualizadas
 SHOW TABLES;
+
+-- Mostrar resumen de citas
+SELECT 'Resumen de citas:' AS info;
+SELECT 
+    c.id_cita,
+    c.fecha_cita,
+    c.hora_cita,
+    c.estado,
+    u.nombre AS paciente,
+    d.nombre AS doctor
+FROM citas c
+LEFT JOIN usuarios u ON c.id_usuario = u.id_usuario
+LEFT JOIN doctores d ON c.id_doctor = d.id_doctor
+ORDER BY c.fecha_cita DESC, c.hora_cita DESC
+LIMIT 10;
