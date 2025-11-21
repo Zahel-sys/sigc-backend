@@ -35,7 +35,9 @@ public class ServicioMapper {
         }
         
         com.sigc.backend.model.Servicio jpaEntity = new com.sigc.backend.model.Servicio();
-        jpaEntity.setIdServicio(domain.getIdServicio());
+        if (domain.getIdServicio() != null) {
+            jpaEntity.setIdServicio(domain.getIdServicio());
+        }
         jpaEntity.setNombreServicio(domain.getNombreServicio());
         jpaEntity.setDescripcion(domain.getDescripcion());
         jpaEntity.setDuracionMinutos(domain.getDuracionMinutos());

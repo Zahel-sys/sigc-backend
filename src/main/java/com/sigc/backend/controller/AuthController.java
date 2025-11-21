@@ -7,7 +7,6 @@ import com.sigc.backend.dto.RegistroResponse;
 import com.sigc.backend.domain.service.usecase.auth.LoginRequest;
 import com.sigc.backend.domain.service.usecase.auth.LoginResponse;
 import com.sigc.backend.domain.service.usecase.auth.ChangePasswordUseCase;
-import com.sigc.backend.domain.service.usecase.auth.RegisterUseCase;
 import com.sigc.backend.application.service.AuthApplicationService;
 import com.sigc.backend.security.JwtUtil;
 import jakarta.validation.Valid;

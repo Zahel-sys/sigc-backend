@@ -34,7 +34,9 @@ public class EspecialidadMapper {
         }
         
         com.sigc.backend.model.Especialidad jpaEntity = new com.sigc.backend.model.Especialidad();
-        jpaEntity.setIdEspecialidad(domain.getIdEspecialidad());
+        if (domain.getIdEspecialidad() != null) {
+            jpaEntity.setIdEspecialidad(domain.getIdEspecialidad());
+        }
         jpaEntity.setNombre(domain.getNombre());
         jpaEntity.setDescripcion(domain.getDescripcion());
         jpaEntity.setImagen(domain.getImagen());

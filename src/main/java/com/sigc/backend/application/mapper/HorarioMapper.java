@@ -37,7 +37,9 @@ public class HorarioMapper {
         }
         
         com.sigc.backend.model.Horario jpaEntity = new com.sigc.backend.model.Horario();
-        jpaEntity.setIdHorario(domain.getIdHorario());
+        if (domain.getIdHorario() != null) {
+            jpaEntity.setIdHorario(domain.getIdHorario());
+        }
         jpaEntity.setFecha(domain.getFecha());
         jpaEntity.setTurno(domain.getTurno());
         jpaEntity.setHoraInicio(domain.getHoraInicio());

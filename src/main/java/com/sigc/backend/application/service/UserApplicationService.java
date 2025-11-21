@@ -1,6 +1,5 @@
 package com.sigc.backend.application.service;
 
-import com.sigc.backend.application.mapper.UsuarioMapper;
 import com.sigc.backend.domain.exception.DomainException;
 import com.sigc.backend.domain.model.Usuario;
 import com.sigc.backend.domain.port.IUsuarioRepository;

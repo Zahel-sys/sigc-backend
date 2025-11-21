@@ -35,7 +35,9 @@ public class DoctorMapper {
         }
         
         com.sigc.backend.model.Doctor jpaEntity = new com.sigc.backend.model.Doctor();
-        jpaEntity.setIdDoctor(domain.getIdDoctor());
+        if (domain.getIdDoctor() != null) {
+            jpaEntity.setIdDoctor(domain.getIdDoctor());
+        }
         jpaEntity.setNombre(domain.getNombre());
         jpaEntity.setEspecialidad(domain.getEspecialidad());
         jpaEntity.setCupoPacientes(domain.getCupoPacientes());

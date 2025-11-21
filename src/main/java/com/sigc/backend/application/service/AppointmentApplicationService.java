@@ -7,9 +7,6 @@ import com.sigc.backend.domain.port.ICitaRepository;
 import com.sigc.backend.domain.service.usecase.appointment.CreateAppointmentRequest;
 import com.sigc.backend.domain.service.usecase.appointment.CreateAppointmentResponse;
 import com.sigc.backend.domain.service.usecase.appointment.CreateAppointmentUseCase;
-import com.sigc.backend.domain.service.usecase.appointment.CreateAppointmentRequest;
-import com.sigc.backend.domain.service.usecase.appointment.CreateAppointmentResponse;
-import com.sigc.backend.domain.service.usecase.appointment.CreateAppointmentUseCase;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
