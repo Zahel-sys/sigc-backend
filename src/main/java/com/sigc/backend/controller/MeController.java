@@ -69,7 +69,7 @@ public class MeController {
                                 "message", "Token antiguo detectado. Por favor, cierra sesión y vuelve a hacer login."
                             ));
                 }
-                idUsuario = usuarioTemp.getIdUsuario();
+                idUsuario = usuarioTemp.getId();
             }
 
             // Buscar usuario por ID
@@ -79,16 +79,16 @@ public class MeController {
 
             // Preparar respuesta con todos los datos
             Map<String, Object> response = new HashMap<>();
-            response.put("idUsuario", usuario.getIdUsuario());
+            response.put("idUsuario", usuario.getId());
             response.put("nombre", usuario.getNombre());
             response.put("email", usuario.getEmail());
             response.put("dni", usuario.getDni());
             response.put("telefono", usuario.getTelefono());
-            response.put("rol", usuario.getRol());
-            response.put("activo", usuario.isActivo());
-            response.put("fechaRegistro", usuario.getFechaRegistro());
+            response.put("rol", usuario.getRole());
+            response.put("activo", usuario.getActivo());
+            response.put("fechaRegistro", usuario.getCreatedAt());
 
-            log.info("Datos del usuario {} obtenidos exitosamente", usuario.getIdUsuario());
+            log.info("Datos del usuario {} obtenidos exitosamente", usuario.getId());
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {

@@ -135,19 +135,19 @@ public class TokenController {
             }
 
             // Generar nuevo token con ID
-            String newToken = jwtUtil.generateToken(usuario.getIdUsuario(), usuario.getEmail(), usuario.getRol());
+            String newToken = jwtUtil.generateToken(usuario.getId(), usuario.getEmail(), usuario.getRole());
 
             // Respuesta completa
             response.put("message", "Token renovado exitosamente");
             response.put("token", newToken);
-            response.put("idUsuario", usuario.getIdUsuario());
+            response.put("idUsuario", usuario.getId());
             response.put("nombre", usuario.getNombre());
             response.put("email", usuario.getEmail());
             response.put("dni", usuario.getDni());
             response.put("telefono", usuario.getTelefono());
-            response.put("rol", usuario.getRol());
+            response.put("rol", usuario.getRole());
 
-            log.info("Token renovado exitosamente para usuario ID: {}", usuario.getIdUsuario());
+            log.info("Token renovado exitosamente para usuario ID: {}", usuario.getId());
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
