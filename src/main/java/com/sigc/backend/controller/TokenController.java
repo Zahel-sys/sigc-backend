@@ -1,7 +1,7 @@
 package com.sigc.backend.controller;
 
-import com.sigc.backend.model.Usuario;
-import com.sigc.backend.repository.UsuarioRepository;
+import com.sigc.backend.application.service.UserApplicationService;
+import com.sigc.backend.domain.model.Usuario;
 import com.sigc.backend.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +23,7 @@ import java.util.Map;
 public class TokenController {
 
     private final JwtUtil jwtUtil;
-    private final UsuarioRepository usuarioRepository;
+    private final UserApplicationService userApplicationService;
 
     /**
      * POST /auth/validate-token
@@ -122,11 +122,12 @@ public class TokenController {
             // Determinar si el subject es ID o email
             try {
                 Long userId = Long.parseLong(subject);
-                usuario = usuarioRepository.findById(userId)
+                usuario = userApplicationService.getUserById(userId)
                         .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
             } catch (NumberFormatException e) {
                 // El subject es un email (token antiguo)
-                usuario = usuarioRepository.findByEmail(subject);
+                usuario = userApplicationService.getUserByEmail(subject)
+                        .orElse(null);
                 if (usuario == null) {
                     response.put("error", "Usuario no encontrado con email: " + subject);
                     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);

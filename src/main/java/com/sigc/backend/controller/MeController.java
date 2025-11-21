@@ -1,7 +1,7 @@
 package com.sigc.backend.controller;
 
-import com.sigc.backend.model.Usuario;
-import com.sigc.backend.repository.UsuarioRepository;
+import com.sigc.backend.application.service.UserApplicationService;
+import com.sigc.backend.domain.model.Usuario;
 import com.sigc.backend.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +23,7 @@ import java.util.Map;
 public class MeController {
 
     private final JwtUtil jwtUtil;
-    private final UsuarioRepository usuarioRepository;
+    private final UserApplicationService userApplicationService;
 
     /**
      * GET /auth/me
@@ -59,7 +59,8 @@ public class MeController {
                 email = jwtUtil.getEmailFromToken(token);
                 
                 // Buscar usuario por email
-                Usuario usuarioTemp = usuarioRepository.findByEmail(email);
+                Usuario usuarioTemp = userApplicationService.getUserByEmail(email)
+                        .orElse(null);
                 if (usuarioTemp == null) {
                     log.error("Usuario no encontrado con email: {}", email);
                     return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -73,7 +74,7 @@ public class MeController {
 
             // Buscar usuario por ID
             final Long finalIdUsuario = idUsuario;
-            Usuario usuario = usuarioRepository.findById(finalIdUsuario)
+            Usuario usuario = userApplicationService.getUserById(finalIdUsuario)
                     .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + finalIdUsuario));
 
             // Preparar respuesta con todos los datos

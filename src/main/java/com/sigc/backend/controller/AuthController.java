@@ -4,19 +4,17 @@ import com.sigc.backend.dto.CambiarPasswordRequest;
 import com.sigc.backend.dto.CambiarPasswordResponse;
 import com.sigc.backend.dto.RegistroRequest;
 import com.sigc.backend.dto.RegistroResponse;
-import com.sigc.backend.model.Usuario;
-import com.sigc.backend.repository.UsuarioRepository;
-import com.sigc.backend.service.UsuarioService;
 import com.sigc.backend.domain.service.usecase.auth.LoginRequest;
 import com.sigc.backend.domain.service.usecase.auth.LoginResponse;
 import com.sigc.backend.domain.service.usecase.auth.ChangePasswordUseCase;
+import com.sigc.backend.domain.service.usecase.auth.RegisterUseCase;
 import com.sigc.backend.application.service.AuthApplicationService;
+import com.sigc.backend.security.JwtUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -35,10 +33,8 @@ import java.util.Map;
 @Slf4j
 public class AuthController {
 
-    private final UsuarioRepository usuarioRepository;
-    private final UsuarioService usuarioService;
-    private final PasswordEncoder passwordEncoder;
     private final AuthApplicationService authApplicationService;
+    private final JwtUtil jwtUtil;
 
     /**
      * POST /auth/register
@@ -51,7 +47,26 @@ public class AuthController {
     public ResponseEntity<RegistroResponse> register(@Valid @RequestBody RegistroRequest request) {
         log.info("Recibida petición de registro para: {}", request.getEmail());
         
-        RegistroResponse response = usuarioService.registrarUsuario(request);
+        // Construir request de dominio
+        RegisterUseCase.RegisterRequest registerRequest = new RegisterUseCase.RegisterRequest(
+            request.getEmail(),
+            request.getPassword(),
+            request.getPasswordConfirmar(),
+            request.getNombre(),
+            request.getDni(),
+            request.getTelefono()
+        );
+        
+        // Delegar a Application Service
+        RegisterUseCase.RegisterResponse registerResponse = authApplicationService.register(registerRequest);
+        
+        // Mapear a DTO de respuesta
+        RegistroResponse response = new RegistroResponse(
+            registerResponse.getUserId(),
+            registerResponse.getEmail(),
+            registerResponse.getToken(),
+            registerResponse.getRol()
+        );
         
         log.info("Usuario registrado exitosamente: {}", response.getIdUsuario());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -138,20 +153,13 @@ public class AuthController {
 
             String token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
 
-            // NOTA: para extraer userId del token se debería usar JwtUtil/ITokenExtractor.
-            // Aquí delegamos el cambio al Application Service. Para compatibilidad rápida,
-            // intentamos usar el repository para localizar al usuario si es necesario.
-            // En PASO 8/Infra implementaremos ITokenExtractor y la extracción real.
-
-            // Construir request de dominio para ChangePasswordUseCase
-            // (userId se debe obtener desde token; aquí se usa una extracción básica temporal)
-            Long userId = null;
+            // Extraer userId del token usando JwtUtil
+            Long userId;
             try {
-                // Intento simple de extracción compatible: si el token es un número, lo parseamos
-                userId = Long.parseLong(token);
+                userId = jwtUtil.getUserIdFromToken(token);
             } catch (Exception ex) {
-                // No pudimos extraer: devolvemos unauthorized
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(crearError("Token inválido o no soportado para este endpoint"));
+                log.warn("Error al extraer userId del token: {}", ex.getMessage());
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(crearError("Token inválido o expirado"));
             }
 
             ChangePasswordUseCase.ChangePasswordRequest changeReq = new ChangePasswordUseCase.ChangePasswordRequest(
