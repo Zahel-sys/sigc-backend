@@ -76,7 +76,7 @@ public class CitaController {
             @RequestBody CreateByHorarioRequest requestBody) {
         try {
             log.info("📝 Recibiendo petición para crear nueva cita");
-            log.info("Datos recibidos: {}", cita);
+            log.info("Datos recibidos: {}", requestBody);
             
             // ✅ VALIDACION 1: Verificar autenticación (token JWT)
             if (authHeader == null || authHeader.isEmpty()) {
