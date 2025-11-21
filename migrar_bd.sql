@@ -74,6 +74,10 @@ MODIFY COLUMN activo BIT(1) NOT NULL DEFAULT 1;
 ALTER TABLE horarios 
 MODIFY COLUMN disponible TINYINT(1) DEFAULT 1;
 
+-- Corregir tipo de dato en citas.id_usuario (debe ser BIGINT para FK)
+ALTER TABLE citas 
+MODIFY COLUMN id_usuario BIGINT;
+
 -- ============================================
 -- PASO 4: Verificar integridad referencial
 -- ============================================

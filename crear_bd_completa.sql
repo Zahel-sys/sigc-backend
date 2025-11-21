@@ -78,7 +78,7 @@ CREATE TABLE citas (
     hora_cita TIME NOT NULL,
     turno VARCHAR(255),
     estado VARCHAR(255) DEFAULT 'ACTIVA',
-    id_usuario INT,
+    id_usuario BIGINT,
     id_doctor INT,
     id_horario INT,
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
