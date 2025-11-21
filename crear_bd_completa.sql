@@ -1,78 +1,147 @@
+-- ============================================
+-- SCRIPT DE BASE DE DATOS SIGC - VERSIÓN MEJORADA
+-- Compatible con el backend actual (nombres en plural)
+-- ============================================
+
 -- Eliminar base de datos si existe y recrearla
 DROP DATABASE IF EXISTS sigc_db;
-CREATE DATABASE sigc_db;
+CREATE DATABASE sigc_db CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 USE sigc_db;
 
--- Tabla Usuario (singular como en tu especificación)
-CREATE TABLE usuario (
+-- ============================================
+-- TABLA: usuarios
+-- ============================================
+CREATE TABLE usuarios (
     id_usuario BIGINT AUTO_INCREMENT PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL,
+    nombre VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     dni VARCHAR(8) NOT NULL,
     telefono VARCHAR(9) NOT NULL,
-    rol ENUM('PACIENTE', 'DOCTOR', 'ADMIN') DEFAULT 'PACIENTE',
-    activo BOOLEAN DEFAULT TRUE,
-    fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+    rol VARCHAR(50) NOT NULL DEFAULT 'PACIENTE',
+    activo BIT(1) NOT NULL DEFAULT 1,
+    fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_email (email),
+    INDEX idx_rol (rol)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Tabla Especialidad (singular)
-CREATE TABLE especialidad (
+-- ============================================
+-- TABLA: especialidades
+-- ============================================
+CREATE TABLE especialidades (
     id_especialidad BIGINT AUTO_INCREMENT PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL UNIQUE,
+    nombre VARCHAR(255) NOT NULL UNIQUE,
     descripcion TEXT,
-    imagen VARCHAR(255)
-);
+    imagen VARCHAR(255),
+    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_nombre (nombre)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Tabla Doctor (singular)
-CREATE TABLE doctor (
-    id_doctor BIGINT AUTO_INCREMENT PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL,
-    especialidad VARCHAR(100) NOT NULL,
+-- ============================================
+-- TABLA: doctores
+-- ============================================
+CREATE TABLE doctores (
+    id_doctor INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(255) NOT NULL,
+    especialidad VARCHAR(255) NOT NULL,
     cupo_pacientes INT DEFAULT 10,
-    imagen VARCHAR(255)
-);
+    imagen VARCHAR(255),
+    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_especialidad (especialidad),
+    INDEX idx_nombre (nombre)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Tabla Horario (singular)
-CREATE TABLE horario (
-    id_horario BIGINT AUTO_INCREMENT PRIMARY KEY,
+-- ============================================
+-- TABLA: horarios
+-- ============================================
+CREATE TABLE horarios (
+    id_horario INT AUTO_INCREMENT PRIMARY KEY,
     fecha DATE NOT NULL,
-    turno VARCHAR(20),
+    turno VARCHAR(255) NOT NULL,
     hora_inicio TIME NOT NULL,
     hora_fin TIME NOT NULL,
-    disponible BOOLEAN DEFAULT TRUE,
-    id_doctor BIGINT,
-    FOREIGN KEY (id_doctor) REFERENCES doctor(id_doctor) ON DELETE CASCADE
-);
+    disponible TINYINT(1) DEFAULT 1,
+    id_doctor INT,
+    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_doctor) REFERENCES doctores(id_doctor) ON DELETE CASCADE,
+    INDEX idx_fecha (fecha),
+    INDEX idx_doctor_fecha (id_doctor, fecha),
+    INDEX idx_disponible (disponible)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Tabla Cita (singular)
-CREATE TABLE cita (
+-- ============================================
+-- TABLA: citas
+-- ============================================
+CREATE TABLE citas (
     id_cita BIGINT AUTO_INCREMENT PRIMARY KEY,
-    fecha DATE NOT NULL,
-    hora TIME NOT NULL,
-    estado ENUM('ACTIVA', 'CANCELADA', 'COMPLETADA') DEFAULT 'ACTIVA',
-    id_usuario BIGINT,
-    id_doctor BIGINT,
-    id_horario BIGINT,
-    FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE,
-    FOREIGN KEY (id_doctor) REFERENCES doctor(id_doctor) ON DELETE CASCADE,
-    FOREIGN KEY (id_horario) REFERENCES horario(id_horario) ON DELETE CASCADE
-);
+    fecha_cita DATE NOT NULL,
+    hora_cita TIME NOT NULL,
+    turno VARCHAR(255),
+    estado VARCHAR(255) DEFAULT 'ACTIVA',
+    id_usuario INT,
+    id_doctor INT,
+    id_horario INT,
+    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
+    FOREIGN KEY (id_doctor) REFERENCES doctores(id_doctor) ON DELETE CASCADE,
+    FOREIGN KEY (id_horario) REFERENCES horarios(id_horario) ON DELETE CASCADE,
+    INDEX idx_usuario (id_usuario),
+    INDEX idx_doctor (id_doctor),
+    INDEX idx_fecha (fecha_cita),
+    INDEX idx_estado (estado)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Insertar admin por defecto (password: Admin123456)
-INSERT INTO usuario (nombre, email, password, dni, telefono, rol, activo) VALUES 
-('Administrador', 'admin@sigc.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhCu', '00000000', '999999999', 'ADMIN', TRUE);
+-- ============================================
+-- TABLA: servicios
+-- ============================================
+CREATE TABLE servicios (
+    id_servicio BIGINT AUTO_INCREMENT PRIMARY KEY,
+    nombre_servicio VARCHAR(255),
+    descripcion VARCHAR(255),
+    duracion_minutos INT NOT NULL,
+    precio DOUBLE NOT NULL,
+    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_nombre (nombre_servicio)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Datos de prueba para especialidades
-INSERT INTO especialidad (nombre, descripcion, imagen) VALUES
-('Cardiología', 'Especialidad médica que se encarga del estudio, diagnóstico y tratamiento de las enfermedades del corazón', '/images/especialidades/cardiologia.jpg'),
-('Pediatría', 'Rama de la medicina que se especializa en la salud y enfermedades de los niños', '/images/especialidades/pediatria.jpg'),
-('Neurología', 'Especialidad médica que trata los trastornos del sistema nervioso', '/images/especialidades/neurologia.jpg');
+-- ============================================
+-- DATOS INICIALES
+-- ============================================
 
--- Datos de prueba para doctores
-INSERT INTO doctor (nombre, especialidad, cupo_pacientes, imagen) VALUES
-('Dr. Juan Pérez', 'Cardiología', 10, '/images/doctores/default.jpg'),
-('Dra. María García', 'Pediatría', 15, '/images/doctores/default.jpg'),
-('Dr. Carlos López', 'Neurología', 12, '/images/doctores/default.jpg');
+-- Usuario administrador (password: Admin123456 - BCrypt hash)
+INSERT INTO usuarios (nombre, email, password, dni, telefono, rol, activo) VALUES 
+('Administrador', 'admin@sigc.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhCu', '00000000', '999999999', 'ADMIN', 1);
 
+-- Especialidades médicas
+INSERT INTO especialidades (nombre, descripcion, imagen) VALUES
+('Cardiología', 'Atención del corazón y sistema circulatorio', '/uploads/especialidades/cardiologia.jpg'),
+('Pediatría', 'Atención médica de niños y adolescentes', '/uploads/especialidades/pediatria.jpg'),
+('Odontología', 'Cuidado dental y salud bucal', '/uploads/especialidades/odontologia.jpg'),
+('Dermatología', 'Tratamiento de enfermedades de la piel', '/uploads/especialidades/dermatologia.jpg'),
+('Ginecología', 'Salud reproductiva y cuidado femenino', '/uploads/especialidades/ginecologia.jpg'),
+('Neurología', 'Especialidad médica que trata los trastornos del sistema nervioso', '/uploads/especialidades/neurologia.jpg');
+
+-- Doctores (usando los mismos de la BD actual)
+INSERT INTO doctores (nombre, especialidad, cupo_pacientes, imagen) VALUES
+('Dr. Ricardo López', 'Cardiología', 10, '/uploads/doctores/ricardo-lopez.jpg'),
+('Dra. Sofía Torres', 'Pediatría', 15, '/uploads/doctores/sofia-torres.jpg'),
+('Dr. Luis Ramos', 'Odontología', 8, '/uploads/doctores/luis-ramos.jpg'),
+('Dra. Carmen Vega', 'Dermatología', 12, '/uploads/doctores/carmen-vega.jpg'),
+('Dra. Ana Gutiérrez', 'Ginecología', 10, '/uploads/doctores/ana-gutierrez.jpg');
+
+-- Horarios de ejemplo
+INSERT INTO horarios (fecha, turno, hora_inicio, hora_fin, disponible, id_doctor) VALUES
+('2025-11-25', 'Mañana', '09:00:00', '12:00:00', 1, 1),
+('2025-11-25', 'Tarde', '14:00:00', '17:00:00', 1, 2),
+('2025-11-26', 'Mañana', '09:00:00', '12:00:00', 1, 3),
+('2025-11-27', 'Tarde', '14:00:00', '17:00:00', 1, 4),
+('2025-11-28', 'Mañana', '08:30:00', '11:30:00', 1, 5);
+
+-- ============================================
+-- VERIFICACIÓN
+-- ============================================
 SELECT 'Base de datos creada exitosamente' AS resultado;
+SELECT COUNT(*) AS total_usuarios FROM usuarios;
+SELECT COUNT(*) AS total_doctores FROM doctores;
+SELECT COUNT(*) AS total_especialidades FROM especialidades;
+SELECT COUNT(*) AS total_horarios FROM horarios;
