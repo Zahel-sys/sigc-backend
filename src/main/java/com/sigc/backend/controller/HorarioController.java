@@ -58,25 +58,117 @@ public class HorarioController {
     }
 
     @PostMapping
-    public ResponseEntity<?> crear(@Valid @RequestBody HorarioRequest request) {
+    public ResponseEntity<?> crear(@RequestBody Map<String, Object> rawRequest) {
         try {
-            log.info("📥 Creando nuevo horario para doctor ID: {}", request.getIdDoctor());
+            log.info("📥 Request recibido completo: {}", rawRequest);
+            log.info("📥 Claves del request: {}", rawRequest.keySet());
+            
+            // Extraer idDoctor del request (puede venir como Long o dentro de objeto doctor)
+            Long idDoctor = null;
+            
+            if (rawRequest.containsKey("idDoctor")) {
+                Object idDoctorObj = rawRequest.get("idDoctor");
+                log.info("🔍 Tipo de idDoctor: {}", idDoctorObj != null ? idDoctorObj.getClass().getName() : "null");
+                log.info("🔍 Valor de idDoctor: {}", idDoctorObj);
+                
+                if (idDoctorObj instanceof Number) {
+                    idDoctor = ((Number) idDoctorObj).longValue();
+                } else if (idDoctorObj instanceof String) {
+                    try {
+                        idDoctor = Long.parseLong((String) idDoctorObj);
+                    } catch (NumberFormatException e) {
+                        log.error("❌ No se pudo parsear idDoctor como Long: {}", idDoctorObj);
+                    }
+                } else if (idDoctorObj instanceof Map) {
+                    // El frontend podría estar enviando {idDoctor: {value: 1}}
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> idMap = (Map<String, Object>) idDoctorObj;
+                    log.info("🔍 idDoctor es un Map: {}", idMap);
+                    Object innerValue = idMap.get("idDoctor");
+                    if (innerValue == null) innerValue = idMap.get("value");
+                    if (innerValue instanceof Number) {
+                        idDoctor = ((Number) innerValue).longValue();
+                    }
+                }
+            } else if (rawRequest.containsKey("doctor")) {
+                Object doctorObj = rawRequest.get("doctor");
+                log.info("🔍 Tipo de doctor: {}", doctorObj != null ? doctorObj.getClass().getName() : "null");
+                log.info("🔍 Valor de doctor: {}", doctorObj);
+                
+                if (doctorObj instanceof Map) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> doctorMap = (Map<String, Object>) doctorObj;
+                    Object idDoctorObj = doctorMap.get("idDoctor");
+                    if (idDoctorObj instanceof Number) {
+                        idDoctor = ((Number) idDoctorObj).longValue();
+                    }
+                } else if (doctorObj instanceof Number) {
+                    idDoctor = ((Number) doctorObj).longValue();
+                }
+            }
+            
+            log.info("📋 ID Doctor extraído final: {}", idDoctor);
             
             // Validar que venga el doctor
-            if (request.getIdDoctor() == null) {
-                log.warn("⚠️ No se proporcionó ID de doctor");
+            if (idDoctor == null) {
+                log.warn("⚠️ No se proporcionó ID de doctor válido");
+                log.warn("⚠️ Request completo era: {}", rawRequest);
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("error", "Debe seleccionar un doctor"));
+                        .body(Map.of("error", "Debe seleccionar un doctor", "requestRecibido", rawRequest));
+            }
+            
+            // Extraer datos del request con manejo de errores
+            log.info("🔍 Extrayendo campos del request...");
+            LocalDate fecha = null;
+            String turno = null;
+            LocalTime horaInicio = null;
+            LocalTime horaFin = null;
+            
+            try {
+                if (rawRequest.get("fecha") != null) {
+                    fecha = LocalDate.parse(rawRequest.get("fecha").toString());
+                    log.info("✅ Fecha parseada: {}", fecha);
+                }
+            } catch (Exception e) {
+                log.error("❌ Error parseando fecha: {}", e.getMessage());
+            }
+            
+            try {
+                turno = (String) rawRequest.get("turno");
+                log.info("✅ Turno: {}", turno);
+            } catch (Exception e) {
+                log.error("❌ Error obteniendo turno: {}", e.getMessage());
+            }
+            
+            try {
+                if (rawRequest.get("horaInicio") != null) {
+                    horaInicio = LocalTime.parse(rawRequest.get("horaInicio").toString());
+                    log.info("✅ HoraInicio parseada: {}", horaInicio);
+                }
+            } catch (Exception e) {
+                log.error("❌ Error parseando horaInicio: {}", e.getMessage());
+            }
+            
+            try {
+                if (rawRequest.get("horaFin") != null) {
+                    horaFin = LocalTime.parse(rawRequest.get("horaFin").toString());
+                    log.info("✅ HoraFin parseada: {}", horaFin);
+                }
+            } catch (Exception e) {
+                log.error("❌ Error parseando horaFin: {}", e.getMessage());
             }
             
             // Construir horario de dominio
+            log.info("🏗️ Construyendo horario con: fecha={}, turno={}, horaInicio={}, horaFin={}, idDoctor={}", 
+                fecha, turno, horaInicio, horaFin, idDoctor);
+            
             Horario horario = Horario.builder()
-                    .fecha(request.getFecha())
-                    .turno(request.getTurno())
-                    .horaInicio(request.getHoraInicio())
-                    .horaFin(request.getHoraFin())
+                    .fecha(fecha)
+                    .turno(turno)
+                    .horaInicio(horaInicio)
+                    .horaFin(horaFin)
                     .disponible(true)
-                    .idDoctor(request.getIdDoctor())
+                    .idDoctor(idDoctor)
                     .build();
             
             Horario saved = horarioApplicationService.createHorario(horario);
@@ -94,25 +186,58 @@ public class HorarioController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> actualizar(@PathVariable @NonNull Long id, @Valid @RequestBody HorarioRequest request) {
+    public ResponseEntity<?> actualizar(@PathVariable @NonNull Long id, @RequestBody Map<String, Object> rawRequest) {
         try {
             log.info("📝 Actualizando horario ID: {}", id);
+            log.info("📥 Request recibido: {}", rawRequest);
+            
+            // Extraer idDoctor del request (puede venir como Long o dentro de objeto doctor)
+            Long idDoctor = null;
+            if (rawRequest.containsKey("idDoctor")) {
+                Object idDoctorObj = rawRequest.get("idDoctor");
+                idDoctor = idDoctorObj instanceof Number ? ((Number) idDoctorObj).longValue() : null;
+            } else if (rawRequest.containsKey("doctor")) {
+                Object doctorObj = rawRequest.get("doctor");
+                if (doctorObj instanceof Map) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> doctorMap = (Map<String, Object>) doctorObj;
+                    Object idDoctorObj = doctorMap.get("idDoctor");
+                    idDoctor = idDoctorObj instanceof Number ? ((Number) idDoctorObj).longValue() : null;
+                }
+            }
+            
+            log.info("📋 ID Doctor extraído: {}", idDoctor);
             
             // Validar que venga el doctor
-            if (request.getIdDoctor() == null) {
+            if (idDoctor == null) {
                 log.warn("⚠️ No se proporcionó ID de doctor");
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("error", "Debe seleccionar un doctor"));
             }
             
+            // Extraer datos del request
+            LocalDate fecha = rawRequest.get("fecha") != null 
+                ? LocalDate.parse(rawRequest.get("fecha").toString()) 
+                : null;
+            String turno = (String) rawRequest.get("turno");
+            LocalTime horaInicio = rawRequest.get("horaInicio") != null 
+                ? LocalTime.parse(rawRequest.get("horaInicio").toString()) 
+                : null;
+            LocalTime horaFin = rawRequest.get("horaFin") != null 
+                ? LocalTime.parse(rawRequest.get("horaFin").toString()) 
+                : null;
+            Boolean disponible = rawRequest.get("disponible") != null 
+                ? (Boolean) rawRequest.get("disponible") 
+                : true;
+            
             // Construir horario de dominio
             Horario horario = Horario.builder()
-                    .fecha(request.getFecha())
-                    .turno(request.getTurno())
-                    .horaInicio(request.getHoraInicio())
-                    .horaFin(request.getHoraFin())
-                    .disponible(request.isDisponible())
-                    .idDoctor(request.getIdDoctor())
+                    .fecha(fecha)
+                    .turno(turno)
+                    .horaInicio(horaInicio)
+                    .horaFin(horaFin)
+                    .disponible(disponible)
+                    .idDoctor(idDoctor)
                     .build();
             
             Horario actualizado = horarioApplicationService.updateHorario(id, horario);
