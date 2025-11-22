@@ -1,5 +1,12 @@
-# Render configuration: 1 service para backend (Docker), 1 para frontend (Docker)
-# Antes de hacer deploy crea los servicios en Render o sube este archivo al repo.
+# Render Blueprint para SIGC Backend + Frontend
+# Para importar: Dashboard → New → Blueprint → selecciona este repo
+# Render creará automáticamente: 1 servicio backend, 1 frontend, 1 base de datos Postgres
+
+databases:
+  - name: sigc-postgres
+    databaseName: sigc_db
+    user: sigc_user
+    plan: starter
 
 services:
   - type: web
@@ -8,14 +15,22 @@ services:
     dockerfilePath: Dockerfile
     plan: starter
     autoDeploy: true
+    healthCheckPath: /actuator/health
+    disk:
+      name: sigc-uploads
+      mountPath: /srv/uploads
+      sizeGB: 1
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: prod
       - key: SPRING_DATASOURCE_URL
-        # value: postgres://user:password@host:5432/dbname  <= configurar en el panel de Render
-        value: ${POSTGRES_URL}
+        fromDatabase:
+          name: sigc-postgres
+          property: connectionString
       - key: JWT_SECRET
-        value: ${JWT_SECRET}
+        generateValue: true
+      - key: APP_UPLOAD_DIR
+        value: /srv/uploads/
 
   - type: web
     name: sigc-frontend
@@ -23,3 +38,9 @@ services:
     dockerfilePath: sigc-frontend/Dockerfile
     plan: starter
     autoDeploy: true
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: sigc-backend-api
+          property: host
