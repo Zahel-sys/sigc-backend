@@ -3,6 +3,7 @@ package com.sigc.backend.controller;
 import com.sigc.backend.application.mapper.DoctorMapper;
 import com.sigc.backend.application.service.DoctorApplicationService;
 import com.sigc.backend.domain.model.Doctor;
+import com.sigc.backend.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -27,7 +28,10 @@ public class DoctorController {
 
     private final DoctorApplicationService doctorApplicationService;
     private final DoctorMapper doctorMapper;
-   private final String BASE_UPLOAD_DIR = "C:/sigc/uploads/doctores/";
+    private final NotificationService notificationService;
+
+    @org.springframework.beans.factory.annotation.Value("${app.upload.dir:uploads/}")
+    private String appUploadDir; // base upload dir configurable
 
     private final List<String> EXTENSIONES_PERMITIDAS = Arrays.asList("jpg", "jpeg", "png", "webp");
     private final long MAX_SIZE = 5 * 1024 * 1024;
@@ -48,29 +52,56 @@ public class DoctorController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> crear(
             @RequestParam("nombre") String nombre,
-            @RequestParam("especialidad") String especialidad,
-            @RequestParam("cupoPacientes") Integer cupoPacientes,
+            @RequestParam("apellido") String apellido,
+            @RequestParam("telefono") String telefono,
+            @RequestParam("correo") String correo,
+            @RequestParam("especialidadId") Long especialidadId,
             @RequestParam(value = "imagen", required = false) MultipartFile imagen) {
 
         try {
+            log.info("📥 POST /doctores - Crear doctor");
+            log.info("  - nombre: {}, apellido: {}", nombre, apellido);
+            log.info("  - correo: {}, telefono: {}", correo, telefono);
+            log.info("  - especialidadId: {}", especialidadId);
+            
             Doctor doctor = Doctor.builder()
                     .nombre(nombre)
-                    .especialidad(especialidad)
-                    .cupoPacientes(cupoPacientes)
+                    .apellido(apellido)
+                    .telefono(telefono)
+                    .correo(correo)
+                    .especialidadId(especialidadId)
                     .build();
 
             if (imagen != null && !imagen.isEmpty()) {
-                doctor.setImagen(guardarImagen(imagen));
+                String rutaImagen = guardarImagen(imagen);
+                doctor.setImagen(rutaImagen);
+                log.info("  - imagen guardada: {}", rutaImagen);
             }
 
             Doctor saved = doctorApplicationService.createDoctor(doctor);
+            log.info("✅ Doctor creado exitosamente con ID: {}", saved.getIdDoctor());
+            
+            // 🔔 Enviar notificación de nuevo doctor
+            try {
+                String mensaje = String.format("Nuevo doctor registrado: Dr. %s %s", 
+                    saved.getNombre(), saved.getApellido());
+                notificationService.notifyDoctorUpdate(
+                    String.valueOf(saved.getIdDoctor()), 
+                    mensaje, 
+                    doctorMapper.toJpaEntity(saved)
+                );
+                log.info("✅ Notificación de nuevo doctor enviada");
+            } catch (Exception notifEx) {
+                log.warn("⚠️ Error enviando notificación de nuevo doctor: {}", notifEx.getMessage());
+            }
+            
             return ResponseEntity.status(HttpStatus.CREATED).body(doctorMapper.toJpaEntity(saved));
 
         } catch (IllegalArgumentException e) {
-            log.warn("Validación fallida al crear doctor: {}", e.getMessage());
+            log.warn("⚠️ Validación fallida al crear doctor: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (Exception e) {
-            log.error("Error al crear doctor: {}", e.getMessage());
+            log.error("❌ Error al crear doctor: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error al crear doctor: " + e.getMessage());
         }
@@ -79,34 +110,77 @@ public class DoctorController {
     @PutMapping("/{id}")
     public ResponseEntity<?> actualizar(
             @PathVariable Long id,
-            @RequestParam("nombre") String nombre,
-            @RequestParam("especialidad") String especialidad,
-            @RequestParam("cupoPacientes") Integer cupoPacientes,
+            @RequestParam(required = false) String nombre,
+            @RequestParam(required = false) String apellido,
+            @RequestParam(required = false) String telefono,
+            @RequestParam(required = false) String correo,
+            @RequestParam(required = false) Long especialidadId,
             @RequestParam(value = "imagen", required = false) MultipartFile imagen) {
 
         try {
+            log.info("📥 PUT /doctores/{}", id);
+            log.info("  - nombre: {}, apellido: {}", nombre, apellido);
+            log.info("  - correo: {}, telefono: {}", correo, telefono);
+            log.info("  - especialidadId: {}", especialidadId);
+            log.info("  - imagenFile: {}", imagen != null ? imagen.getOriginalFilename() : "null");
+            
             Doctor existente = doctorApplicationService.getDoctorById(id)
                     .orElseThrow(() -> new IllegalArgumentException("Doctor no encontrado"));
 
-            if (nombre != null) existente.setNombre(nombre);
-            if (especialidad != null) existente.setEspecialidad(especialidad);
-            if (cupoPacientes != null) existente.setCupoPacientes(cupoPacientes);
+            // Actualizar solo los campos que vienen
+            if (nombre != null && !nombre.trim().isEmpty()) {
+                existente.setNombre(nombre.trim());
+            }
+            if (apellido != null && !apellido.trim().isEmpty()) {
+                existente.setApellido(apellido.trim());
+            }
+            if (telefono != null && !telefono.trim().isEmpty()) {
+                existente.setTelefono(telefono.trim());
+            }
+            if (correo != null && !correo.trim().isEmpty()) {
+                existente.setCorreo(correo.trim());
+            }
+            if (especialidadId != null) {
+                existente.setEspecialidadId(especialidadId);
+            }
 
+            // Guardar imagen si viene
             if (imagen != null && !imagen.isEmpty()) {
                 String imagenGuardada = guardarImagen(imagen);
                 if (imagenGuardada != null) {
                     existente.setImagen(imagenGuardada);
+                    log.info("  - nueva imagen guardada: {}", imagenGuardada);
                 }
             }
 
             Doctor doctorGuardado = doctorApplicationService.updateDoctor(id, existente);
+            log.info("✅ Doctor actualizado exitosamente: {}", id);
+            
+            // 🔔 Enviar notificación de actualización de doctor
+            try {
+                String mensaje = String.format("Información actualizada: Dr. %s %s", 
+                    doctorGuardado.getNombre(), doctorGuardado.getApellido());
+                notificationService.notifyDoctorUpdate(
+                    String.valueOf(id), 
+                    mensaje, 
+                    doctorMapper.toJpaEntity(doctorGuardado)
+                );
+                log.info("✅ Notificación de actualización de doctor enviada");
+            } catch (Exception notifEx) {
+                log.warn("⚠️ Error enviando notificación de actualización de doctor: {}", notifEx.getMessage());
+            }
+            
             return ResponseEntity.ok(doctorMapper.toJpaEntity(doctorGuardado));
 
         } catch (IllegalArgumentException e) {
-            log.warn("Error de validación al actualizar doctor: {}", e.getMessage());
+            log.warn("⚠️ Error de validación al actualizar doctor: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (IOException e) {
+            log.error("❌ Error al guardar imagen: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error al guardar imagen: " + e.getMessage());
         } catch (Exception e) {
-            log.error("Error al actualizar doctor: {}", e.getMessage());
+            log.error("❌ Error al actualizar doctor: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error al actualizar doctor: " + e.getMessage());
         }
@@ -142,7 +216,9 @@ public class DoctorController {
             throw new IOException("Formato no permitido. Solo: " + EXTENSIONES_PERMITIDAS);
         }
 
-        File uploadDir = new File(BASE_UPLOAD_DIR);
+        String base = appUploadDir == null ? "uploads/" : appUploadDir;
+        if (!base.endsWith("/")) base = base + "/";
+        File uploadDir = new File(base + "doctores/");
         if (!uploadDir.exists()) uploadDir.mkdirs();
 
         String sanitized = originalFilename.replaceAll("[^a-zA-Z0-9.-]", "_");
@@ -150,16 +226,20 @@ public class DoctorController {
 
         File destino = new File(uploadDir, fileName);
         file.transferTo(destino);
-        System.out.println("Archivo guardado en: " + destino.getAbsolutePath());
-
-        // Retornar solo el nombre del archivo
-        return fileName;
+        
+        // Retornar la ruta accesible desde el frontend
+        String rutaAccesible = "/uploads/doctores/" + fileName;
+        log.info("✅ Imagen de doctor guardada en: {}", destino.getAbsolutePath());
+        log.info("📍 Ruta accesible: {}", rutaAccesible);
+        return rutaAccesible;
     }
 
     @GetMapping("/imagen/{filename:.+}")
     public ResponseEntity<byte[]> servirImagen(@PathVariable String filename) {
         try {
-            File imgFile = new File(BASE_UPLOAD_DIR + filename);
+            String base = appUploadDir == null ? "uploads/" : appUploadDir;
+            if (!base.endsWith("/")) base = base + "/";
+            File imgFile = new File(base + "doctores/" + filename);
             if (!imgFile.exists()) {
                 return ResponseEntity.notFound().build();
             }

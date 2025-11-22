@@ -3,6 +3,7 @@ package com.sigc.backend.controller;
 import com.sigc.backend.application.mapper.HorarioMapper;
 import com.sigc.backend.application.service.HorarioApplicationService;
 import com.sigc.backend.domain.model.Horario;
+import com.sigc.backend.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -26,6 +27,7 @@ public class HorarioController {
 
     private final HorarioApplicationService horarioApplicationService;
     private final HorarioMapper horarioMapper;
+    private final NotificationService notificationService;
 
     @GetMapping
     public List<com.sigc.backend.model.Horario> listar() {
@@ -173,6 +175,21 @@ public class HorarioController {
             
             Horario saved = horarioApplicationService.createHorario(horario);
             log.info("✅ Horario creado exitosamente con ID: {}", saved.getIdHorario());
+            
+            // 🔔 Enviar notificación de nuevo horario disponible
+            try {
+                String mensaje = String.format("Nuevo horario disponible: %s - %s a %s", 
+                    saved.getFecha(), saved.getHoraInicio(), saved.getHoraFin());
+                notificationService.notifyHorarioChange(
+                    String.valueOf(idDoctor), 
+                    mensaje, 
+                    horarioMapper.toJpaEntity(saved)
+                );
+                log.info("✅ Notificación de horario enviada");
+            } catch (Exception notifEx) {
+                log.warn("⚠️ Error enviando notificación de horario: {}", notifEx.getMessage());
+            }
+            
             return ResponseEntity.ok(horarioMapper.toJpaEntity(saved));
         } catch (IllegalArgumentException e) {
             log.warn("⚠️ Error de validación: {}", e.getMessage());
@@ -242,6 +259,22 @@ public class HorarioController {
             
             Horario actualizado = horarioApplicationService.updateHorario(id, horario);
             log.info("✅ Horario {} actualizado exitosamente", id);
+            
+            // 🔔 Enviar notificación de cambio de horario
+            try {
+                String mensaje = String.format("Horario actualizado: %s - %s a %s (Disponible: %s)", 
+                    actualizado.getFecha(), actualizado.getHoraInicio(), actualizado.getHoraFin(), 
+                    actualizado.isDisponible() ? "Sí" : "No");
+                notificationService.notifyHorarioChange(
+                    String.valueOf(idDoctor), 
+                    mensaje, 
+                    horarioMapper.toJpaEntity(actualizado)
+                );
+                log.info("✅ Notificación de cambio de horario enviada");
+            } catch (Exception notifEx) {
+                log.warn("⚠️ Error enviando notificación de cambio de horario: {}", notifEx.getMessage());
+            }
+            
             return ResponseEntity.ok(horarioMapper.toJpaEntity(actualizado));
         } catch (IllegalArgumentException e) {
             log.warn("⚠️ Error de validación: {}", e.getMessage());

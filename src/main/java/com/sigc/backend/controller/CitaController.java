@@ -3,6 +3,7 @@ package com.sigc.backend.controller;
 import com.sigc.backend.security.JwtUtil;
 import com.sigc.backend.application.service.AppointmentApplicationService;
 import com.sigc.backend.domain.service.usecase.appointment.CreateAppointmentRequest;
+import com.sigc.backend.service.NotificationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -23,6 +24,7 @@ public class CitaController {
 
     @Autowired private JwtUtil jwtUtil;
     @Autowired private AppointmentApplicationService appointmentApplicationService;
+    @Autowired private NotificationService notificationService;
 
     @GetMapping
     public List<com.sigc.backend.application.mapper.CitaMapper.CitaDTO> listar() {
@@ -110,6 +112,21 @@ public class CitaController {
                         idUsuario
                 );
                 var resp = appointmentApplicationService.createAppointment(createReq);
+                
+                // 🔔 Enviar notificaciones en tiempo real
+                try {
+                    notificationService.notifyCitaCreada(
+                        resp.getAppointmentId(),
+                        String.valueOf(resp.getDoctorId()),
+                        String.valueOf(resp.getUsuarioId()),
+                        resp
+                    );
+                    log.info("✅ Notificaciones WebSocket enviadas para cita ID: {}", resp.getAppointmentId());
+                } catch (Exception notifEx) {
+                    log.warn("⚠️ Error enviando notificación WebSocket (cita creada): {}", notifEx.getMessage());
+                    // No fallar la request si falla la notificación
+                }
+                
                 return ResponseEntity.status(HttpStatus.CREATED).body(resp);
             } catch (RuntimeException ex) {
                 String m = ex.getMessage();
@@ -163,8 +180,32 @@ public class CitaController {
             if (id == null) {
                 return ResponseEntity.badRequest().body("ID inválido");
             }
+            
+            // Obtener datos de la cita antes de cancelar
+            var cita = appointmentApplicationService.getAllAppointments().stream()
+                    .filter(c -> c.getId().equals(id))
+                    .findFirst()
+                    .orElse(null);
+            
             appointmentApplicationService.cancel(id);
             log.info("Cita {} cancelada correctamente", id);
+            
+            // 🔔 Enviar notificaciones de cancelación
+            if (cita != null) {
+                try {
+                    notificationService.notifyCitaActualizada(
+                        id,
+                        String.valueOf(cita.getDoctorId()),
+                        String.valueOf(cita.getUsuarioId()),
+                        "CANCELADA",
+                        cita
+                    );
+                    log.info("✅ Notificaciones de cancelación enviadas para cita ID: {}", id);
+                } catch (Exception notifEx) {
+                    log.warn("⚠️ Error enviando notificación WebSocket (cita cancelada): {}", notifEx.getMessage());
+                }
+            }
+            
             return ResponseEntity.ok("Cita cancelada correctamente");
         } catch (Exception e) {
             log.error("Error al cancelar cita {}: {}", id, e.getMessage(), e);

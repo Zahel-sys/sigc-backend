@@ -29,8 +29,9 @@ public class EspecialidadController {
 
     private final EspecialidadApplicationService especialidadApplicationService;
     private final EspecialidadMapper especialidadMapper;
-    
-    private final String BASE_UPLOAD_DIR = "C:/sigc/uploads/especialidades/";
+
+    @org.springframework.beans.factory.annotation.Value("${app.upload.dir:uploads/}")
+    private String appUploadDir; // base upload dir configurable
     private final List<String> EXTENSIONES_PERMITIDAS = Arrays.asList("jpg", "jpeg", "png", "webp");
     private final long MAX_SIZE = 5 * 1024 * 1024; // 5MB
 
@@ -220,7 +221,9 @@ public class EspecialidadController {
             throw new IOException("Formato no permitido. Solo: " + EXTENSIONES_PERMITIDAS);
         }
         
-        File uploadDir = new File(BASE_UPLOAD_DIR);
+        String base = appUploadDir == null ? "uploads/" : appUploadDir;
+        if (!base.endsWith("/")) base = base + "/";
+        File uploadDir = new File(base + "especialidades/");
         if (!uploadDir.exists()) {
             uploadDir.mkdirs();
         }
@@ -231,14 +234,19 @@ public class EspecialidadController {
         File destino = new File(uploadDir, fileName);
         file.transferTo(destino);
         
-        log.info("Archivo guardado en: {}", destino.getAbsolutePath());
-        return fileName;
+        // Retornar la ruta accesible desde el frontend
+        String rutaAccesible = "/uploads/especialidades/" + fileName;
+        log.info("✅ Archivo guardado en: {}", destino.getAbsolutePath());
+        log.info("📍 Ruta accesible: {}", rutaAccesible);
+        return rutaAccesible;
     }
     
     @GetMapping("/imagen/{filename:.+}")
     public ResponseEntity<byte[]> servirImagen(@PathVariable String filename) {
         try {
-            File imgFile = new File(BASE_UPLOAD_DIR + filename);
+                String base = appUploadDir == null ? "uploads/" : appUploadDir;
+                if (!base.endsWith("/")) base = base + "/";
+                File imgFile = new File(base + "especialidades/" + filename);
             if (!imgFile.exists()) {
                 return ResponseEntity.notFound().build();
             }

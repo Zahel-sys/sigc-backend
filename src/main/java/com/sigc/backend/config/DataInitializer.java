@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 @Slf4j
+@org.springframework.core.annotation.Order(1)
 public class DataInitializer implements CommandLineRunner {
 
     private final UsuarioRepository usuarioRepository;

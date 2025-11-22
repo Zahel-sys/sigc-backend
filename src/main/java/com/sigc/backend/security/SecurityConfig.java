@@ -61,7 +61,10 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Endpoints públicos - sin autenticación
                 .requestMatchers("/auth/**").permitAll()
+                .requestMatchers("/test/**").permitAll() // ⭐️ TEMPORAL PARA DEBUGGING ⭐️
                 .requestMatchers("/api/especialidades/**", "/especialidades/**").permitAll()
+                // Permitir el endpoint de SockJS / WebSocket (handshake /info, etc.)
+                .requestMatchers("/ws/**").permitAll()
                 .requestMatchers("/api/doctores/**", "/doctores/**").permitAll()
                 .requestMatchers("/api/horarios/**", "/horarios/**").permitAll()
                 .requestMatchers("/api/citas/**", "/citas/**").permitAll()
