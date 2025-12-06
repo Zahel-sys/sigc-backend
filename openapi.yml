@@ -1,0 +1,1046 @@
+openapi: 3.0.3
+info:
+  title: SIGC - Sistema de Gestión de Citas Médicas
+  description: API completa para gestión de especialidades, doctores, citas y usuarios
+  version: 1.0.0
+  contact:
+    name: Soporte SIGC
+    email: soporte@sigc.com
+  license:
+    name: MIT
+servers:
+  - url: http://localhost:8080
+    description: Servidor de desarrollo
+  - url: https://api.sigc.com
+    description: Servidor de producción
+
+tags:
+  - name: Autenticación
+    description: Endpoints de login, registro y gestión de tokens
+  - name: Usuarios
+    description: Gestión de perfiles y datos de usuarios
+  - name: Especialidades
+    description: Listado y gestión de especialidades médicas
+  - name: Doctores
+    description: Gestión de doctores y sus horarios
+  - name: Citas
+    description: Reserva y gestión de citas médicas
+  - name: Horarios
+    description: Disponibilidad y horarios de atención
+
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Autenticación
+      summary: Iniciar sesión
+      description: Autentica un usuario y retorna un token JWT válido por 24 horas
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: paciente@sigc.com
+              password: Paciente123456
+      responses:
+        '200':
+          description: Login exitoso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+              example:
+                message: Login exitoso
+                token: eyJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6InBhY2llbnRlQHNpZ2MuY29tIiwicm9sIjoiUEFDSUVOVEUiLCJzdWIiOiI1IiwiaWF0IjoxNzY0OTc4Mjc3LCJleHAiOjE3NjUwNjQ2Nzd9
+                rol: PACIENTE
+                idUsuario: 5
+                email: paciente@sigc.com
+        '401':
+          description: Credenciales inválidas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '400':
+          description: Solicitud inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/register:
+    post:
+      tags:
+        - Autenticación
+      summary: Registrar nuevo usuario
+      description: Crea una nueva cuenta de usuario en el sistema
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            example:
+              nombre: Juan Pérez
+              email: juan@sigc.com
+              password: Juan123456
+              dni: "12345678"
+              telefono: "555000100"
+              rol: PACIENTE
+      responses:
+        '201':
+          description: Usuario registrado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistroResponse'
+              example:
+                idUsuario: 5
+                nombre: Juan Pérez
+                email: juan@sigc.com
+                mensaje: Usuario registrado exitosamente
+        '400':
+          description: Datos de entrada inválidos
+        '409':
+          description: El email ya está registrado
+
+  /auth/me:
+    get:
+      tags:
+        - Autenticación
+      summary: Obtener perfil del usuario autenticado
+      description: Retorna los datos del usuario actualmente autenticado (requiere token JWT)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Datos del usuario obtenidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioResponse'
+        '401':
+          description: Usuario no autenticado
+
+  /usuarios:
+    get:
+      tags:
+        - Usuarios
+      summary: Listar todos los usuarios
+      description: Retorna una lista de todos los usuarios registrados (requiere token de admin)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Lista de usuarios obtenida
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UsuarioResponse'
+        '401':
+          description: No autorizado
+      
+    post:
+      tags:
+        - Usuarios
+      summary: Crear nuevo usuario
+      description: Crea un nuevo usuario en el sistema (requiere permisos de admin)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Usuario creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioResponse'
+        '401':
+          description: No autorizado
+
+  /usuarios/{id}:
+    get:
+      tags:
+        - Usuarios
+      summary: Obtener usuario por ID
+      description: Retorna los datos de un usuario específico
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 5
+      responses:
+        '200':
+          description: Usuario encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioResponse'
+        '404':
+          description: Usuario no encontrado
+        '401':
+          description: No autorizado
+
+    put:
+      tags:
+        - Usuarios
+      summary: Actualizar usuario
+      description: Actualiza los datos de un usuario
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActualizarUsuarioRequest'
+      responses:
+        '200':
+          description: Usuario actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioResponse'
+        '404':
+          description: Usuario no encontrado
+        '401':
+          description: No autorizado
+
+  /especialidades:
+    get:
+      tags:
+        - Especialidades
+      summary: Listar todas las especialidades
+      description: Retorna una lista de todas las especialidades médicas disponibles
+      responses:
+        '200':
+          description: Lista de especialidades obtenida
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EspecialidadResponse'
+              example:
+                - idEspecialidad: 9
+                  nombre: Medicina General
+                  descripcion: Atención médica general
+                  imagen: null
+                - idEspecialidad: 10
+                  nombre: Cardiología
+                  descripcion: Especialidad en enfermedades del corazón
+                  imagen: null
+
+    post:
+      tags:
+        - Especialidades
+      summary: Crear nueva especialidad
+      description: Crea una nueva especialidad médica (requiere permisos de admin)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EspecialidadRequest'
+      responses:
+        '201':
+          description: Especialidad creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EspecialidadResponse'
+        '401':
+          description: No autorizado
+
+  /doctores:
+    get:
+      tags:
+        - Doctores
+      summary: Listar todos los doctores
+      description: Retorna una lista de doctores disponibles con filtros opcionales
+      parameters:
+        - name: especialidad
+          in: query
+          schema:
+            type: string
+          description: Filtrar por especialidad
+          example: Cardiología
+        - name: disponibles
+          in: query
+          schema:
+            type: boolean
+          description: Mostrar solo doctores disponibles
+      responses:
+        '200':
+          description: Lista de doctores obtenida
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DoctorResponse'
+              example:
+                - idDoctor: 1
+                  nombre: Dr. Carlos López
+                  especialidad: Cardiología
+                  telefono: "555001111"
+                  email: carlos@sigc.com
+                  disponible: true
+
+    post:
+      tags:
+        - Doctores
+      summary: Registrar nuevo doctor
+      description: Registra un nuevo doctor en el sistema (requiere permisos de admin)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DoctorRequest'
+      responses:
+        '201':
+          description: Doctor registrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DoctorResponse'
+        '401':
+          description: No autorizado
+        '400':
+          description: Datos inválidos
+
+  /doctores/{id}:
+    get:
+      tags:
+        - Doctores
+      summary: Obtener doctor por ID
+      description: Retorna los datos de un doctor específico
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '200':
+          description: Doctor encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DoctorResponse'
+        '404':
+          description: Doctor no encontrado
+
+  /citas:
+    get:
+      tags:
+        - Citas
+      summary: Listar citas
+      description: Retorna citas del usuario autenticado o todas las citas (si es admin)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: estado
+          in: query
+          schema:
+            type: string
+            enum: [PENDIENTE, CONFIRMADA, CANCELADA, COMPLETADA]
+          description: Filtrar por estado
+        - name: fecha
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filtrar por fecha (YYYY-MM-DD)
+      responses:
+        '200':
+          description: Lista de citas obtenida
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CitaResponse'
+              example:
+                - idCita: 1
+                  paciente: Juan Pérez
+                  doctor: Dr. Carlos López
+                  fecha: "2025-12-15"
+                  hora: "10:30"
+                  especialidad: Cardiología
+                  estado: CONFIRMADA
+        '401':
+          description: No autorizado
+
+    post:
+      tags:
+        - Citas
+      summary: Crear nueva cita
+      description: Reserva una nueva cita médica
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearCitaRequest'
+            example:
+              idDoctor: 1
+              fecha: "2025-12-15"
+              hora: "10:30"
+              motivo: Revisión periódica
+      responses:
+        '201':
+          description: Cita creada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CitaResponse'
+        '400':
+          description: Datos inválidos
+        '401':
+          description: No autorizado
+        '409':
+          description: Horario no disponible
+
+  /citas/{id}:
+    get:
+      tags:
+        - Citas
+      summary: Obtener cita por ID
+      description: Retorna los detalles de una cita específica
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '200':
+          description: Cita encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CitaResponse'
+        '404':
+          description: Cita no encontrada
+        '401':
+          description: No autorizado
+
+    put:
+      tags:
+        - Citas
+      summary: Actualizar cita
+      description: Modifica los detalles de una cita
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActualizarCitaRequest'
+      responses:
+        '200':
+          description: Cita actualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CitaResponse'
+        '404':
+          description: Cita no encontrada
+        '401':
+          description: No autorizado
+
+    delete:
+      tags:
+        - Citas
+      summary: Cancelar cita
+      description: Cancela una cita existente
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Cita cancelada exitosamente
+        '404':
+          description: Cita no encontrada
+        '401':
+          description: No autorizado
+
+  /horarios:
+    get:
+      tags:
+        - Horarios
+      summary: Obtener disponibilidad de horarios
+      description: Retorna los horarios disponibles para un doctor en una fecha específica
+      parameters:
+        - name: idDoctor
+          in: query
+          required: true
+          schema:
+            type: integer
+          example: 1
+        - name: fecha
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Fecha en formato YYYY-MM-DD
+          example: "2025-12-15"
+      responses:
+        '200':
+          description: Horarios disponibles obtenidos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HorarioResponse'
+              example:
+                - idHorario: 1
+                  doctor: Dr. Carlos López
+                  fecha: "2025-12-15"
+                  hora: "09:00"
+                  disponible: true
+                - idHorario: 2
+                  doctor: Dr. Carlos López
+                  fecha: "2025-12-15"
+                  hora: "10:30"
+                  disponible: true
+        '400':
+          description: Parámetros requeridos no proporcionados
+
+  /orders:
+    get:
+      tags:
+        - Citas
+      summary: Listar órdenes médicas
+      description: Retorna una lista de órdenes/prescripciones médicas
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Lista de órdenes obtenida
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrdenResponse'
+        '401':
+          description: No autorizado
+
+    post:
+      tags:
+        - Citas
+      summary: Crear nueva orden médica
+      description: Crea una nueva orden/prescripción médica
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearOrdenRequest'
+      responses:
+        '201':
+          description: Orden creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrdenResponse'
+        '401':
+          description: No autorizado
+        '400':
+          description: Datos inválidos
+
+  /orders/{id}:
+    get:
+      tags:
+        - Citas
+      summary: Obtener orden médica por ID
+      description: Retorna los detalles de una orden específica
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Orden encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrdenResponse'
+        '404':
+          description: Orden no encontrada
+        '401':
+          description: No autorizado
+
+    put:
+      tags:
+        - Citas
+      summary: Actualizar orden médica
+      description: Actualiza los detalles de una orden
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearOrdenRequest'
+      responses:
+        '200':
+          description: Orden actualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrdenResponse'
+        '404':
+          description: Orden no encontrada
+        '401':
+          description: No autorizado
+
+    delete:
+      tags:
+        - Citas
+      summary: Eliminar orden médica
+      description: Elimina una orden existente
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Orden eliminada
+        '404':
+          description: Orden no encontrada
+        '401':
+          description: No autorizado
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token JWT obtenido al hacer login
+
+  schemas:
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: paciente@sigc.com
+        password:
+          type: string
+          format: password
+          example: Paciente123456
+
+    LoginResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Login exitoso
+        token:
+          type: string
+          description: Token JWT válido por 24 horas
+        rol:
+          type: string
+          enum: [PACIENTE, DOCTOR, ADMIN]
+          example: PACIENTE
+        idUsuario:
+          type: integer
+          example: 5
+        email:
+          type: string
+          example: paciente@sigc.com
+
+    RegisterRequest:
+      type: object
+      required:
+        - nombre
+        - email
+        - password
+        - dni
+        - telefono
+      properties:
+        nombre:
+          type: string
+          minLength: 2
+          maxLength: 100
+          example: Juan Pérez
+        email:
+          type: string
+          format: email
+          example: juan@sigc.com
+        password:
+          type: string
+          minLength: 6
+          maxLength: 50
+          example: Juan123456
+        dni:
+          type: string
+          pattern: '^\d{8}$'
+          example: "12345678"
+        telefono:
+          type: string
+          pattern: '^\d{9}$'
+          example: "555000100"
+        rol:
+          type: string
+          enum: [PACIENTE, DOCTOR, ADMIN]
+          default: PACIENTE
+          example: PACIENTE
+
+    RegistroResponse:
+      type: object
+      properties:
+        idUsuario:
+          type: integer
+        nombre:
+          type: string
+        email:
+          type: string
+        mensaje:
+          type: string
+
+    UsuarioResponse:
+      type: object
+      properties:
+        idUsuario:
+          type: integer
+          example: 5
+        nombre:
+          type: string
+          example: Juan Pérez
+        email:
+          type: string
+          example: juan@sigc.com
+        dni:
+          type: string
+          example: "12345678"
+        telefono:
+          type: string
+          example: "555000100"
+        rol:
+          type: string
+          enum: [PACIENTE, DOCTOR, ADMIN]
+          example: PACIENTE
+        activo:
+          type: boolean
+          example: true
+        fechaRegistro:
+          type: string
+          format: date-time
+
+    ActualizarUsuarioRequest:
+      type: object
+      properties:
+        nombre:
+          type: string
+          minLength: 2
+          maxLength: 100
+        telefono:
+          type: string
+          pattern: '^\d{9}$'
+
+    EspecialidadResponse:
+      type: object
+      properties:
+        idEspecialidad:
+          type: integer
+          example: 9
+        nombre:
+          type: string
+          example: Medicina General
+        descripcion:
+          type: string
+          example: Atención médica general
+        imagen:
+          type: string
+          nullable: true
+
+    EspecialidadRequest:
+      type: object
+      required:
+        - nombre
+      properties:
+        nombre:
+          type: string
+          example: Cardiología
+        descripcion:
+          type: string
+          example: Especialidad en enfermedades del corazón
+        imagen:
+          type: string
+          nullable: true
+
+    DoctorResponse:
+      type: object
+      properties:
+        idDoctor:
+          type: integer
+          example: 1
+        nombre:
+          type: string
+          example: Dr. Carlos López
+        especialidad:
+          type: string
+          example: Cardiología
+        telefono:
+          type: string
+          example: "555001111"
+        email:
+          type: string
+          example: carlos@sigc.com
+        disponible:
+          type: boolean
+          example: true
+        horarioAtencion:
+          type: string
+          example: "09:00 - 18:00"
+
+    DoctorRequest:
+      type: object
+      required:
+        - nombre
+        - especialidad
+        - telefono
+        - email
+      properties:
+        nombre:
+          type: string
+          example: Dr. Carlos López
+        especialidad:
+          type: string
+          example: Cardiología
+        telefono:
+          type: string
+          pattern: '^\d{9}$'
+          example: "555001111"
+        email:
+          type: string
+          format: email
+          example: carlos@sigc.com
+        horarioAtencion:
+          type: string
+          example: "09:00 - 18:00"
+
+    CitaResponse:
+      type: object
+      properties:
+        idCita:
+          type: integer
+          example: 1
+        paciente:
+          type: string
+          example: Juan Pérez
+        doctor:
+          type: string
+          example: Dr. Carlos López
+        fecha:
+          type: string
+          format: date
+          example: "2025-12-15"
+        hora:
+          type: string
+          example: "10:30"
+        especialidad:
+          type: string
+          example: Cardiología
+        motivo:
+          type: string
+          example: Revisión periódica
+        estado:
+          type: string
+          enum: [PENDIENTE, CONFIRMADA, CANCELADA, COMPLETADA]
+          example: CONFIRMADA
+        fechaCreacion:
+          type: string
+          format: date-time
+
+    CrearCitaRequest:
+      type: object
+      required:
+        - idDoctor
+        - fecha
+        - hora
+      properties:
+        idDoctor:
+          type: integer
+          example: 1
+        fecha:
+          type: string
+          format: date
+          description: Fecha en formato YYYY-MM-DD
+          example: "2025-12-15"
+        hora:
+          type: string
+          description: Hora en formato HH:MM
+          example: "10:30"
+        motivo:
+          type: string
+          example: Revisión periódica
+
+    ActualizarCitaRequest:
+      type: object
+      properties:
+        fecha:
+          type: string
+          format: date
+        hora:
+          type: string
+        motivo:
+          type: string
+        estado:
+          type: string
+          enum: [PENDIENTE, CONFIRMADA, CANCELADA, COMPLETADA]
+
+    HorarioResponse:
+      type: object
+      properties:
+        idHorario:
+          type: integer
+          example: 1
+        doctor:
+          type: string
+          example: Dr. Carlos López
+        fecha:
+          type: string
+          format: date
+          example: "2025-12-15"
+        hora:
+          type: string
+          example: "09:00"
+        disponible:
+          type: boolean
+          example: true
+
+    OrdenResponse:
+      type: object
+      properties:
+        idOrden:
+          type: integer
+          example: 1
+        paciente:
+          type: string
+          example: Juan Pérez
+        doctor:
+          type: string
+          example: Dr. Carlos López
+        descripcion:
+          type: string
+          example: Prescripción de medicamentos
+        medicamentos:
+          type: array
+          items:
+            type: string
+          example: [Ibuprofeno 400mg, Paracetamol 500mg]
+        observaciones:
+          type: string
+          example: Tomar con las comidas
+        fechaCreacion:
+          type: string
+          format: date-time
+
+    CrearOrdenRequest:
+      type: object
+      required:
+        - idPaciente
+        - idDoctor
+        - descripcion
+      properties:
+        idPaciente:
+          type: integer
+          example: 5
+        idDoctor:
+          type: integer
+          example: 1
+        descripcion:
+          type: string
+          example: Prescripción de medicamentos
+        medicamentos:
+          type: array
+          items:
+            type: string
+          example: [Ibuprofeno 400mg, Paracetamol 500mg]
+        observaciones:
+          type: string
+          example: Tomar con las comidas
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Credenciales inválidas
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          example: 401

@@ -9,11 +9,11 @@ import com.sigc.backend.domain.service.usecase.auth.LoginResponse;
 import com.sigc.backend.domain.service.usecase.auth.ChangePasswordUseCase;
 import com.sigc.backend.application.service.AuthApplicationService;
 import com.sigc.backend.security.JwtUtil;
+import com.sigc.backend.service.UsuarioService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +40,7 @@ public class AuthController {
 
     private final AuthApplicationService authApplicationService;
     private final JwtUtil jwtUtil;
+    private final UsuarioService usuarioService;
 
     /**
      * POST /auth/register
@@ -58,22 +59,8 @@ public class AuthController {
     public ResponseEntity<RegistroResponse> register(@Valid @RequestBody RegistroRequest request) {
         log.info("Recibida petición de registro para: {}", request.getEmail());
         
-        // Construir request de dominio (RegisterUseCase usa LoginRequest internamente)
-        LoginRequest registerRequest = new LoginRequest(
-            request.getEmail(),
-            request.getPassword()
-        );
-        
-        // Delegar a Application Service
-        LoginResponse registerResponse = authApplicationService.register(registerRequest);
-        
-        // Mapear a DTO de respuesta
-        RegistroResponse response = new RegistroResponse(
-            registerResponse.getUserId(),
-            registerResponse.getEmail(),
-            registerResponse.getToken(),
-            registerResponse.getRole()
-        );
+        // Usar UsuarioService que maneja todos los campos de RegistroRequest
+        RegistroResponse response = usuarioService.registrarUsuario(request);
         
         log.info("Usuario registrado exitosamente: {}", response.getIdUsuario());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);

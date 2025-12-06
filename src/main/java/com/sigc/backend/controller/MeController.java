@@ -2,7 +2,6 @@ package com.sigc.backend.controller;
 
 import com.sigc.backend.application.service.UserApplicationService;
 import com.sigc.backend.domain.model.Usuario;
-import com.sigc.backend.security.JwtUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -31,7 +30,6 @@ import java.util.Map;
 @SecurityRequirement(name = "JWT")
 public class MeController {
 
-    private final JwtUtil jwtUtil;
     private final UserApplicationService userApplicationService;
 
     /**

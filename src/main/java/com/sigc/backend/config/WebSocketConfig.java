@@ -4,6 +4,7 @@ import com.sigc.backend.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.lang.NonNull;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.simp.config.ChannelRegistration;
@@ -38,7 +39,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
      * Con SockJS como fallback si WebSocket no está disponible
      */
     @Override
-    public void registerStompEndpoints(StompEndpointRegistry registry) {
+    public void registerStompEndpoints(@NonNull StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
                 .setAllowedOrigins(
                     "http://localhost:5173",
@@ -59,7 +60,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
      * /app - Prefijo para mensajes del cliente al servidor
      */
     @Override
-    public void configureMessageBroker(MessageBrokerRegistry registry) {
+    public void configureMessageBroker(@NonNull MessageBrokerRegistry registry) {
         // Habilita un broker simple en memoria
         // Para producción, considerar RabbitMQ o ActiveMQ
         registry.enableSimpleBroker("/topic", "/queue");
@@ -75,10 +76,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
      * Se ejecuta antes de establecer la conexión
      */
     @Override
-    public void configureClientInboundChannel(ChannelRegistration registration) {
+    public void configureClientInboundChannel(@NonNull ChannelRegistration registration) {
         registration.interceptors(new ChannelInterceptor() {
             @Override
-            public Message<?> preSend(Message<?> message, MessageChannel channel) {
+            public Message<?> preSend(@NonNull Message<?> message, @NonNull MessageChannel channel) {
                 StompHeaderAccessor accessor = 
                     MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
                 

@@ -1,0 +1,40 @@
+{
+  "properties": [
+    {
+      "name": "app.upload.dir",
+      "type": "java.lang.String",
+      "description": "Directorio base para uploads de archivos",
+      "defaultValue": "uploads/"
+    },
+    {
+      "name": "app.name",
+      "type": "java.lang.String",
+      "description": "Nombre de la aplicación",
+      "defaultValue": "SIGC Backend"
+    },
+    {
+      "name": "app.version",
+      "type": "java.lang.String",
+      "description": "Versión de la aplicación",
+      "defaultValue": "1.0.0"
+    },
+    {
+      "name": "jwt.secret",
+      "type": "java.lang.String",
+      "description": "Clave secreta para firmar tokens JWT",
+      "defaultValue": "sigc-secret-key-2025-development-only-change-in-production"
+    },
+    {
+      "name": "jwt.expiration",
+      "type": "java.lang.Long",
+      "description": "Tiempo de expiración del token JWT en milisegundos",
+      "defaultValue": "86400000"
+    },
+    {
+      "name": "cors.allowed-origins",
+      "type": "java.lang.String",
+      "description": "Orígenes permitidos para CORS",
+      "defaultValue": "http://localhost:5173,http://localhost:5174,http://localhost:5175"
+    }
+  ]
+}

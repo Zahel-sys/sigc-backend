@@ -43,7 +43,7 @@ Content-Type: application/json
 
 ```powershell
 $body = @{
-    email = "admin@sigc.com"
+    email = "admin@sigc.com
     password = "Admin123456"
 } | ConvertTo-Json
 
@@ -74,7 +74,7 @@ Si necesitas recrear el usuario administrador:
 El sistema soporta tres roles:
 
 - **ADMIN**: Acceso completo al sistema
-- **DOCTOR**: Gestión de citas y pacientes
+- **DOCTOR**: Gestión de cit"as y pacientes
 - **PACIENTE**: Gestión de sus propias citas
 
 ---

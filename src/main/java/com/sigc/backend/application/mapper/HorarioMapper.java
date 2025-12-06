@@ -5,6 +5,8 @@ import com.sigc.backend.repository.DoctorRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.Objects;
+
 /**
  * Mapper para convertir entre entidad JPA Horario y modelo de dominio Horario
  */
@@ -53,9 +55,10 @@ public class HorarioMapper {
         
         // Cargar Doctor completo desde la base de datos para evitar lazy loading issues
         if (domain.getIdDoctor() != null) {
-            com.sigc.backend.model.Doctor doctor = doctorRepository.findById(domain.getIdDoctor())
+            Long doctorId = Objects.requireNonNull(domain.getIdDoctor(), "Doctor ID cannot be null");
+            com.sigc.backend.model.Doctor doctor = doctorRepository.findById(doctorId)
                     .orElseThrow(() -> new IllegalArgumentException(
-                            "Doctor con ID " + domain.getIdDoctor() + " no encontrado"));
+                            "Doctor con ID " + doctorId + " no encontrado"));
             jpaEntity.setDoctor(doctor);
         }
         

@@ -70,12 +70,14 @@ public class SecurityConfig {
         http
             .cors(Customizer.withDefaults())
             .csrf(csrf -> csrf.disable())
+            .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.disable())) // ⭐️ PERMITIR FRAMES PARA H2 ⭐️
             .httpBasic(httpBasic -> httpBasic.disable())
             .formLogin(form -> form.disable())
             .authorizeHttpRequests(auth -> auth
                 // Endpoints públicos - sin autenticación
                 .requestMatchers("/auth/login", "/auth/register").permitAll()
                 .requestMatchers("/test/**").permitAll() // ⭐️ TEMPORAL PARA DEBUGGING ⭐️
+                .requestMatchers("/h2-console/**").permitAll() // ⭐️ H2 CONSOLE ACCESO TEMPORAL ⭐️
                 .requestMatchers("/api/especialidades/**", "/especialidades/**").permitAll()
                 // Permitir el endpoint de SockJS / WebSocket (handshake /info, etc.)
                 .requestMatchers("/ws/**").permitAll()
@@ -86,6 +88,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/usuarios/**", "/usuarios/**").permitAll()
                 .requestMatchers("/uploads/**").permitAll()
                 .requestMatchers("/images/**").permitAll() // ⭐️ PERMITIR ARCHIVOS ESTÁTICOS ⭐️
+                .requestMatchers("/favicon.svg", "/favicon.ico").permitAll() // ⭐️ FAVICON ⭐️
                 // SWAGGER/OpenAPI Documentation - sin autenticación
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                 // Otras peticiones exigen autenticación

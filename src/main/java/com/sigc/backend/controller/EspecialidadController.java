@@ -16,7 +16,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import jakarta.validation.Valid;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -195,6 +194,7 @@ public class EspecialidadController {
         return defaultType;
     }
     
+    @SuppressWarnings("unused")
     private String guardarImagen(MultipartFile file) throws IOException {
         if (file.getSize() > MAX_SIZE) {
             throw new IOException("El archivo excede los 5MB permitidos.");

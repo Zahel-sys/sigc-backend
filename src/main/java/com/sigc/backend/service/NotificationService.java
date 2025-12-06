@@ -7,6 +7,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 /**
  * Servicio para enviar notificaciones en tiempo real vía WebSocket
@@ -236,7 +237,8 @@ public class NotificationService {
                 .build();
         
         // Enviar a canal de horarios para que frontend notifique a afectados
-        messagingTemplate.convertAndSend("/topic/horarios", notification);
+        Object notificationObj = Objects.requireNonNull(notification, "Notification cannot be null");
+        messagingTemplate.convertAndSend("/topic/horarios", notificationObj);
         
         log.info("🕒 Notificación de cambio de horario enviada (Doctor: {})", doctorId);
     }
